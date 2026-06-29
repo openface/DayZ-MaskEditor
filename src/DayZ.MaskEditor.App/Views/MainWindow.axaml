@@ -1,0 +1,138 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="clr-namespace:DayZ.MaskEditor.App.Controls"
+        x:Class="DayZ.MaskEditor.App.Views.MainWindow"
+        x:Name="Root"
+        x:CompileBindings="False"
+        Width="1280" Height="820"
+        MinWidth="900" MinHeight="600"
+        Title="DayZ Mask Editor">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- Setup bar -->
+    <Border Grid.Row="0" Padding="8" Background="#22000000">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,*,Auto,Auto,*,Auto,Auto,Auto"
+            RowDefinitions="Auto" ColumnSpacing="6">
+        <TextBlock Grid.Column="0" Text="layers.cfg:" VerticalAlignment="Center"/>
+        <TextBox   Grid.Column="1" Text="{Binding CfgPath}" Watermark="path to layers.cfg"/>
+        <Button    Grid.Column="2" Content="…" Command="{Binding BrowseCfgCommand}"/>
+
+        <TextBlock Grid.Column="3" Text="satmap:" VerticalAlignment="Center" Margin="8,0,0,0"/>
+        <TextBox   Grid.Column="4" Text="{Binding SatmapPath}" Watermark="satellite image"/>
+        <Button    Grid.Column="5" Content="…" Command="{Binding BrowseSatmapCommand}"/>
+
+        <TextBlock Grid.Column="6" Text="mask:" VerticalAlignment="Center" Margin="8,0,0,0"/>
+        <TextBox   Grid.Column="7" Text="{Binding MaskPath}" Watermark="surface mask"/>
+        <Button    Grid.Column="8" Content="…" Command="{Binding BrowseMaskCommand}"/>
+
+        <Button    Grid.Column="9"  Content="Load"  Margin="8,0,0,0"
+                   Command="{Binding LoadCommand}" IsEnabled="{Binding !IsBusy}"/>
+        <Button    Grid.Column="10" Content="Save mask"
+                   Command="{Binding SaveMaskCommand}" IsEnabled="{Binding !IsBusy}"/>
+      </Grid>
+    </Border>
+
+    <!-- Main body -->
+    <Grid Grid.Row="1" ColumnDefinitions="280,*,320">
+
+      <!-- Left: surface browser -->
+      <Border Grid.Column="0" Padding="8" Background="#18000000">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="Surfaces" FontWeight="Bold" Margin="0,0,0,6"/>
+          <Border DockPanel.Dock="Top" Padding="6" Margin="0,0,0,6"
+                  Background="#22000000" CornerRadius="4">
+            <TextBlock Text="{Binding ArmedText}" TextWrapping="Wrap"/>
+          </Border>
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Surfaces}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button HorizontalAlignment="Stretch" Margin="0,1" Padding="4"
+                          Command="{Binding #Root.DataContext.ArmSurfaceCommand}"
+                          CommandParameter="{Binding}"
+                          ToolTip.Tip="{Binding Tooltip}">
+                    <Grid ColumnDefinitions="22,*,Auto">
+                      <Border Grid.Column="0" Width="18" Height="18" CornerRadius="2"
+                              Background="{Binding Swatch}"
+                              BorderBrush="#80FFFFFF" BorderThickness="1"/>
+                      <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                        <TextBlock Text="{Binding Name}"/>
+                        <TextBlock Text="{Binding RgbText}" FontSize="10" Opacity="0.6"/>
+                      </StackPanel>
+                      <TextBlock Grid.Column="2" Text="{Binding CoverageText}"
+                                 VerticalAlignment="Center" FontSize="11" Opacity="0.8"/>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+
+      <!-- Center: editing canvas -->
+      <Border Grid.Column="1" Background="#202020">
+        <ctrl:MaskCanvas x:Name="Canvas"/>
+      </Border>
+
+      <!-- Right: tools + log -->
+      <Border Grid.Column="2" Padding="8" Background="#18000000">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Spacing="6">
+            <TextBlock Text="Brush" FontWeight="Bold"/>
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" VerticalAlignment="Center"/>
+              <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="1" Maximum="4000"
+                             Increment="1" Value="{Binding BrushSize}"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Overlay" VerticalAlignment="Center"/>
+              <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1"
+                      Value="{Binding OverlayOpacity}"/>
+            </Grid>
+
+            <Separator/>
+            <TextBlock Text="Validate (report only)" FontWeight="Bold"/>
+            <Button HorizontalAlignment="Stretch" Content="Check legend colours"
+                    Command="{Binding CheckLegendCommand}" IsEnabled="{Binding !IsBusy}"/>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6" RowDefinitions="Auto,Auto" RowSpacing="4">
+              <StackPanel Grid.Row="0" Grid.Column="0">
+                <TextBlock Text="Tile size" FontSize="11"/>
+                <NumericUpDown Minimum="1" Maximum="8192" Increment="1" Value="{Binding TileSize}"/>
+              </StackPanel>
+              <StackPanel Grid.Row="0" Grid.Column="1">
+                <TextBlock Text="Overlap" FontSize="11"/>
+                <NumericUpDown Minimum="0" Maximum="4096" Increment="1" Value="{Binding TileOverlap}"/>
+              </StackPanel>
+              <StackPanel Grid.Row="1" Grid.Column="0">
+                <TextBlock Text="Tiles / row" FontSize="11"/>
+                <NumericUpDown Minimum="1" Maximum="1024" Increment="1" Value="{Binding TilesInRow}"/>
+              </StackPanel>
+              <StackPanel Grid.Row="1" Grid.Column="1">
+                <TextBlock Text="Max colours" FontSize="11"/>
+                <NumericUpDown Minimum="1" Maximum="64" Increment="1" Value="{Binding TileMaxColors}"/>
+              </StackPanel>
+            </Grid>
+            <Button HorizontalAlignment="Stretch" Content="Check colours per tile"
+                    Command="{Binding CheckTilesCommand}" IsEnabled="{Binding !IsBusy}"/>
+            <CheckBox Content="Show tile grid" IsChecked="{Binding ShowTileGrid}"/>
+            <Button HorizontalAlignment="Stretch" Content="Check image specs"
+                    Command="{Binding CheckSpecsCommand}" IsEnabled="{Binding !IsBusy}"/>
+
+            <Separator/>
+            <TextBlock Text="Log" FontWeight="Bold"/>
+          </StackPanel>
+
+          <TextBox Text="{Binding LogText, Mode=OneWay}" IsReadOnly="True"
+                   FontFamily="Consolas,Menlo,monospace" FontSize="11"
+                   AcceptsReturn="True" TextWrapping="NoWrap"
+                   VerticalContentAlignment="Top"/>
+        </DockPanel>
+      </Border>
+    </Grid>
+
+    <!-- Status bar -->
+    <Border Grid.Row="2" Padding="8,4" Background="#22000000">
+      <TextBlock Text="{Binding Status}" Opacity="0.8" FontSize="12"/>
+    </Border>
+  </Grid>
+</Window>
