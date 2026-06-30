@@ -75,6 +75,8 @@ public sealed class MaskCanvas : Control, ICanvasHost
 
     public void InvalidateView() => InvalidateVisual();
 
+    public void RefreshMask() => RecomposeAll();
+
     public void SetOverlayOpacity(double opacity)
     {
         _opacity = Math.Clamp(opacity, 0, 1);

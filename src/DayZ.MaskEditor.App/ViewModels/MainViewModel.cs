@@ -39,7 +39,23 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private string _logText = "";
     [ObservableProperty] private string _status = "Load a layers.cfg to begin.";
-    [ObservableProperty] private bool _isBusy;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSnapFix))]
+    [NotifyPropertyChangedFor(nameof(CanTileFix))]
+    private bool _isBusy;
+
+    // Fixes are only offered once the matching check has actually found problems.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSnapFix))]
+    private bool _hasStrays;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanTileFix))]
+    private bool _hasOverLimitTiles;
+
+    public bool CanSnapFix => HasStrays && !IsBusy;
+    public bool CanTileFix => HasOverLimitTiles && !IsBusy;
 
     // --- terrain setup (mirrors the TB Mapframe; the single source of truth) ---
     public ObservableCollection<ShapeLayerViewModel> ShapeLayers { get; } = new();
@@ -243,6 +259,9 @@ public sealed partial class MainViewModel : ObservableObject
         ArmedSurface = null;
         Document.ArmedRgb = -1;
         ArmedText = "Pick a surface to paint";
+        // A freshly loaded mask hasn't been checked yet — no fixes offered until it is.
+        HasStrays = false;
+        HasOverLimitTiles = false;
     }
 
     // --- arming ----------------------------------------------------------- //
@@ -478,7 +497,32 @@ public sealed partial class MainViewModel : ObservableObject
             var sum = await Task.Run(() => Validation.CheckLegend(mask, surfaces));
             ReportLegend(sum);
             UpdateCoverage(sum);
+            HasStrays = sum.Invalid > 0;
             // Highlight the worst stray colours (cap mirrors the plugin's 64).
+            var strays = sum.Strays.Take(64).Select(s => s.Rgb.Packed).ToHashSet();
+            Canvas?.SetStrayHighlights(strays.Count > 0 ? strays : null);
+        }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
+    private async Task SnapToLegendAsync()
+    {
+        if (Document.Mask is null || Document.Config is null) { Log("Load a mask first."); return; }
+        IsBusy = true;
+        try
+        {
+            var mask = Document.Mask;
+            var surfaces = Document.Config.Surfaces;
+            long changed = await Task.Run(() => AutoFix.SnapToLegend(mask, surfaces));
+            Document.MaskDirty = true;
+            Canvas?.RefreshMask();
+            Log($"Snap to legend: {changed:N0} stray pixel(s) replaced.");
+
+            var sum = await Task.Run(() => Validation.CheckLegend(mask, surfaces));
+            ReportLegend(sum);
+            UpdateCoverage(sum);
+            HasStrays = sum.Invalid > 0;
             var strays = sum.Strays.Take(64).Select(s => s.Rgb.Packed).ToHashSet();
             Canvas?.SetStrayHighlights(strays.Count > 0 ? strays : null);
         }
@@ -501,6 +545,34 @@ public sealed partial class MainViewModel : ObservableObject
             int ts = TileSize, ov = TileOverlap, nt = TilesInRow, mx = TileMaxColors;
             var res = await Task.Run(() => Validation.CheckTiles(mask, ts, ov, nt, mx));
             ReportTiles(res);
+            HasOverLimitTiles = res.OverLimit.Count > 0;
+            Canvas?.SetTileHighlights(res.OverLimit.Count > 0 ? res.OverLimit : null);
+        }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
+    private async Task ConsolidateTilesAsync()
+    {
+        if (Document.Mask is null) { Log("Load a mask first."); return; }
+        if (TileSize <= 0 || TilesInRow <= 0 || TileMaxColors <= 0)
+        {
+            Log("Set tile size, tiles-in-row and max colours (Terrain tab) first.");
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            var mask = Document.Mask;
+            int ts = TileSize, ov = TileOverlap, nt = TilesInRow, mx = TileMaxColors;
+            int fixedTiles = await Task.Run(() => AutoFix.ConsolidateTiles(mask, ts, ov, nt, mx));
+            Document.MaskDirty = true;
+            Canvas?.RefreshMask();
+            Log($"Consolidate tiles: fixed {fixedTiles} over-limit tile(s).");
+
+            var res = await Task.Run(() => Validation.CheckTiles(mask, ts, ov, nt, mx));
+            ReportTiles(res);
+            HasOverLimitTiles = res.OverLimit.Count > 0;
             Canvas?.SetTileHighlights(res.OverLimit.Count > 0 ? res.OverLimit : null);
         }
         finally { IsBusy = false; }

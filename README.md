@@ -20,9 +20,13 @@ pixel/tile logic was ported faithfully (and pinned by the same unit tests) into
   (middle/right-drag), zoom (wheel), fit-to-view. Renders only the visible viewport,
   so 15360²-class terrains stay responsive.
 - **Hard pencil** — exact 8-bit legend colour, no anti-aliasing, adjustable size.
-- **Validation (report-only)** — Check Legend Colours (stray detection + magenta
-  highlight), Check Colours Per Tile (Terrain Builder geometry, ASCII grid, red tile
-  highlight), Check Image Specs. Optional tile-grid overlay.
+- **Validation** — Check Legend Colours (stray detection + magenta highlight), Check
+  Colours Per Tile (Terrain Builder geometry, ASCII grid, red tile highlight), Check
+  Image Specs. Optional tile-grid overlay.
+- **Auto-fix** — *Snap strays → legend* replaces every non-legend pixel with the nearest
+  legend colour; *Consolidate over-limit tiles* brings each over-budget tile down to the
+  colour limit by replacing its rarest colours (fragment-aware, matching the plugin). Both
+  re-run their check afterwards to confirm.
 - **Shapefile overlays** — load one or more Terrain Builder `.shp` exports (roads,
   objects, areas) as read-only reference layers drawn over the satmap, so you can see
   where in-world features sit while painting. Per-layer colour/visibility/opacity. World
@@ -54,10 +58,9 @@ dotnet run --project src/DayZ.MaskEditor.App  # launch the editor
 Then **Browse** to `samples/DemoTerrain/source/` for `layers.cfg`, `satmap.png`, and
 `mask.png`, and click **Load**. To try shapefile overlays, open the **Terrain** tab and
 enter the demo's Mapframe values — Easting `0`, Northing `0`, Grid size `1024`, Cell size
-`1`, Source image `1024`, Flip Y on — then **Add shapefile(s)** from
+`1`, Source image `1024` — then **Add shapefile(s)** from
 `samples/DemoTerrain/source/shapes/` (`demo_roads`, `demo_objects`, `demo_areas`).
 
 ## Deferred to later releases
 
-Auto-fix (snap-to-legend, per-tile consolidation), palette export, replace-surface,
-create-new-mask, and Terrain Builder tile import/export.
+Palette export, replace-surface, create-new-mask, and Terrain Builder tile import/export.

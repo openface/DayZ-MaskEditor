@@ -16,6 +16,9 @@ public interface ICanvasHost
     /// <summary>Repaint (e.g. after opacity or grid change).</summary>
     void InvalidateView();
 
+    /// <summary>Recomposite the visible mask after in-place edits (keeps zoom/pan).</summary>
+    void RefreshMask();
+
     /// <summary>Centre and zoom so the whole image is visible.</summary>
     void FitToView();
 

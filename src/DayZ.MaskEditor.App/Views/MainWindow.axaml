@@ -95,19 +95,19 @@
                       RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                   <TextBlock Grid.Row="0" Grid.Column="0" Text="Easting (m)" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="-1000000" Maximum="1000000"
-                                 Increment="1000" Value="{Binding ShapeOffsetX}"/>
+                                 Increment="1000" Value="{Binding ShapeOffsetX, TargetNullValue=0}"/>
                   <TextBlock Grid.Row="1" Grid.Column="0" Text="Northing (m)" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="-1000000" Maximum="1000000"
-                                 Increment="1000" Value="{Binding ShapeOffsetY}"/>
+                                 Increment="1000" Value="{Binding ShapeOffsetY, TargetNullValue=0}"/>
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Grid size (cells)" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="32768"
-                                 Increment="1" Value="{Binding GridCells}"/>
+                                 Increment="1" Value="{Binding GridCells, TargetNullValue=0}"/>
                   <TextBlock Grid.Row="3" Grid.Column="0" Text="Cell size (m)" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="100000"
-                                 Increment="1" Value="{Binding CellSize}"/>
+                                 Increment="1" Value="{Binding CellSize, TargetNullValue=0}"/>
                   <TextBlock Grid.Row="4" Grid.Column="0" Text="Source image (px)" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="131072"
-                                 Increment="256" Value="{Binding SatSourcePx}"/>
+                                 Increment="256" Value="{Binding SatSourcePx, TargetNullValue=0}"/>
                   <TextBlock Grid.Row="5" Grid.Column="0" Text="Terrain size" VerticalAlignment="Center"/>
                   <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding TerrainMetersText}"
                              VerticalAlignment="Center" Opacity="0.8"/>
@@ -116,16 +116,16 @@
                              VerticalAlignment="Center" Opacity="0.8"/>
                   <TextBlock Grid.Row="7" Grid.Column="0" Text="Tile size (px)" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="7" Grid.Column="1" Minimum="0" Maximum="8192"
-                                 Increment="1" Value="{Binding TileSize}"/>
+                                 Increment="1" Value="{Binding TileSize, TargetNullValue=0}"/>
                   <TextBlock Grid.Row="8" Grid.Column="0" Text="Actual overlap (px)" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="8" Grid.Column="1" Minimum="0" Maximum="4096"
-                                 Increment="1" Value="{Binding TileOverlap}"/>
+                                 Increment="1" Value="{Binding TileOverlap, TargetNullValue=0}"/>
                   <TextBlock Grid.Row="9" Grid.Column="0" Text="Tiles in row" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="9" Grid.Column="1" Minimum="0" Maximum="1024"
-                                 Increment="1" Value="{Binding TilesInRow}"/>
+                                 Increment="1" Value="{Binding TilesInRow, TargetNullValue=0}"/>
                   <TextBlock Grid.Row="10" Grid.Column="0" Text="Max colours" VerticalAlignment="Center"/>
                   <NumericUpDown Grid.Row="10" Grid.Column="1" Minimum="0" Maximum="64"
-                                 Increment="1" Value="{Binding TileMaxColors}"/>
+                                 Increment="1" Value="{Binding TileMaxColors, TargetNullValue=0}"/>
                 </Grid>
               </StackPanel>
             </ScrollViewer>
@@ -219,19 +219,25 @@
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="4">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" VerticalAlignment="Center"/>
               <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="1" Maximum="4000"
-                             Increment="1" Value="{Binding BrushSize}"/>
+                             Increment="1" Value="{Binding BrushSize, TargetNullValue=1}"/>
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Overlay" VerticalAlignment="Center"/>
               <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1"
                       Value="{Binding OverlayOpacity}"/>
             </Grid>
 
             <Separator/>
-            <TextBlock Text="Validate (report only)" FontWeight="Bold"/>
+            <TextBlock Text="Validate &amp; fix" FontWeight="Bold"/>
             <Button HorizontalAlignment="Stretch" Content="Check legend colours"
                     Command="{Binding CheckLegendCommand}" IsEnabled="{Binding !IsBusy}"/>
+            <Button HorizontalAlignment="Stretch" Content="Fix: snap strays → legend"
+                    Command="{Binding SnapToLegendCommand}" IsEnabled="{Binding CanSnapFix}"
+                    ToolTip.Tip="Enabled after Check legend colours finds strays. Replaces every non-legend pixel with the nearest legend colour."/>
             <TextBlock Text="Tile parameters are on the Terrain tab." FontSize="10" Opacity="0.6"/>
             <Button HorizontalAlignment="Stretch" Content="Check colours per tile"
                     Command="{Binding CheckTilesCommand}" IsEnabled="{Binding !IsBusy}"/>
+            <Button HorizontalAlignment="Stretch" Content="Fix: consolidate over-limit tiles"
+                    Command="{Binding ConsolidateTilesCommand}" IsEnabled="{Binding CanTileFix}"
+                    ToolTip.Tip="Enabled after Check colours per tile finds over-limit tiles. Reduces each over-budget tile to the colour limit by replacing its rarest colours."/>
             <CheckBox Content="Show tile grid" IsChecked="{Binding ShowTileGrid}"/>
             <Button HorizontalAlignment="Stretch" Content="Check image specs"
                     Command="{Binding CheckSpecsCommand}" IsEnabled="{Binding !IsBusy}"/>
