@@ -251,6 +251,15 @@
         <ctrl:MaskCanvas x:Name="Canvas"/>
       </Border>
 
+      <!-- Busy overlay (load/save/validate). Covers the canvas and blocks input. -->
+      <Border Grid.Column="1" Background="#99000000" IsVisible="{Binding IsBusy}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+          <ProgressBar IsIndeterminate="True" Width="220" Height="4"/>
+          <TextBlock Text="{Binding BusyText}" Foreground="White" FontSize="18"
+                     HorizontalAlignment="Center"/>
+        </StackPanel>
+      </Border>
+
       <!-- Right: tools + log -->
       <Border Grid.Column="2" Padding="8" Background="#18000000">
         <DockPanel>

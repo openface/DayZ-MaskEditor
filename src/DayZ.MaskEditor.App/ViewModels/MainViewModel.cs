@@ -19,7 +19,23 @@ public sealed partial class MainViewModel : ObservableObject
     public EditorDocument Document { get; } = new();
 
     /// <summary>Set by the window once the canvas exists.</summary>
-    public ICanvasHost? Canvas { get; set; }
+    private ICanvasHost? _canvas;
+    public ICanvasHost? Canvas
+    {
+        get => _canvas;
+        set
+        {
+            _canvas = value;
+            // Push persisted UI state the canvas can't know about until it's connected —
+            // otherwise a restored "Show tile grid" / overlay opacity never reaches it
+            // until the user toggles the control.
+            if (value != null)
+            {
+                value.SetOverlayOpacity(OverlayOpacity);
+                value.SetTileGrid(ShowTileGrid, TileSize, TileOverlap, TilesInRow);
+            }
+        }
+    }
 
     /// <summary>Set by the window (needs a TopLevel for file pickers).</summary>
     public IDialogService? Dialogs { get; set; }
@@ -44,6 +60,14 @@ public sealed partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanSnapFix))]
     [NotifyPropertyChangedFor(nameof(CanTileFix))]
     private bool _isBusy;
+
+    /// <summary>Message shown on the busy overlay. Operations set it before going busy.</summary>
+    [ObservableProperty] private string _busyText = "Working…";
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        if (!value) BusyText = "Working…"; // reset so the next operation's default is generic
+    }
 
     // Fixes are only offered once the matching check has actually found problems.
     [ObservableProperty]
@@ -207,6 +231,7 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
+        BusyText = "Loading map…";
         IsBusy = true;
         Status = "Loading…";
         try
@@ -532,6 +557,7 @@ public sealed partial class MainViewModel : ObservableObject
             target = await Dialogs.SaveFileAsync("Save mask as", "mask.png", "png");
         if (string.IsNullOrWhiteSpace(target)) return;
 
+        BusyText = "Saving mask…";
         IsBusy = true;
         try
         {
