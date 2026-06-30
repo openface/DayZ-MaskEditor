@@ -20,6 +20,7 @@ public partial class MainWindow : Window
             vm.Dialogs = new DialogService(this);
             Canvas.Document = vm.Document;
             vm.Canvas = Canvas;
+            _ = vm.RestoreSavedShapesAsync();
         }
     }
 }

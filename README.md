@@ -23,6 +23,14 @@ pixel/tile logic was ported faithfully (and pinned by the same unit tests) into
 - **Validation (report-only)** — Check Legend Colours (stray detection + magenta
   highlight), Check Colours Per Tile (Terrain Builder geometry, ASCII grid, red tile
   highlight), Check Image Specs. Optional tile-grid overlay.
+- **Shapefile overlays** — load one or more Terrain Builder `.shp` exports (roads,
+  objects, areas) as read-only reference layers drawn over the satmap, so you can see
+  where in-world features sit while painting. Per-layer colour/visibility/opacity. World
+  coordinates are mapped to mask pixels from the **Mapframe values you enter on the
+  Terrain tab** (Easting/Northing, grid size, cell size, source px, flip Y) — nothing is
+  guessed. The editor blocks rendering and tells you what's wrong if the setup is
+  incomplete, the loaded mask doesn't match the declared source size, or a shapefile
+  falls outside the terrain extent.
 - **Save** the mask back to a lossless PNG (byte-exact).
 - **Auto-update** via Velopack on Windows/macOS/Linux.
 
@@ -44,7 +52,10 @@ dotnet run --project src/DayZ.MaskEditor.App  # launch the editor
 ```
 
 Then **Browse** to `samples/DemoTerrain/source/` for `layers.cfg`, `satmap.png`, and
-`mask.png`, and click **Load**.
+`mask.png`, and click **Load**. To try shapefile overlays, open the **Terrain** tab and
+enter the demo's Mapframe values — Easting `0`, Northing `0`, Grid size `1024`, Cell size
+`1`, Source image `1024`, Flip Y on — then **Add shapefile(s)** from
+`samples/DemoTerrain/source/shapes/` (`demo_roads`, `demo_objects`, `demo_areas`).
 
 ## Deferred to later releases
 

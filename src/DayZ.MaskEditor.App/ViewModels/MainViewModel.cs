@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DayZ.MaskEditor.App.Models;
@@ -7,6 +8,7 @@ using DayZ.MaskEditor.App.Services;
 using DayZ.MaskEditor.Core.Config;
 using DayZ.MaskEditor.Core.Imaging;
 using DayZ.MaskEditor.Core.Masking;
+using DayZ.MaskEditor.Core.Shapes;
 
 namespace DayZ.MaskEditor.App.ViewModels;
 
@@ -35,14 +37,38 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private double _overlayOpacity;
     [ObservableProperty] private bool _showTileGrid;
 
+    [ObservableProperty] private string _logText = "";
+    [ObservableProperty] private string _status = "Load a layers.cfg to begin.";
+    [ObservableProperty] private bool _isBusy;
+
+    // --- terrain setup (mirrors the TB Mapframe; the single source of truth) ---
+    public ObservableCollection<ShapeLayerViewModel> ShapeLayers { get; } = new();
+
+    [ObservableProperty] private int _gridCells;        // grid size (cells)
+    [ObservableProperty] private double _cellSize;      // cell size (m)
+    [ObservableProperty] private int _satSourcePx;      // sat/mask source image (px)
+    [ObservableProperty] private double _shapeOffsetX;  // Easting (m)
+    [ObservableProperty] private double _shapeOffsetY;  // Northing (m)
+    [ObservableProperty] private double _shapeNudgeX;
+    [ObservableProperty] private double _shapeNudgeY;
+
+    // Tile parameters (also from the Mapframe Samplers tab) feed Check-per-tile.
     [ObservableProperty] private int _tileSize;
     [ObservableProperty] private int _tileOverlap;
     [ObservableProperty] private int _tilesInRow;
     [ObservableProperty] private int _tileMaxColors;
 
-    [ObservableProperty] private string _logText = "";
-    [ObservableProperty] private string _status = "Load a layers.cfg to begin.";
-    [ObservableProperty] private bool _isBusy;
+    /// <summary>Derived (read-only): terrain size in metres = grid × cell.</summary>
+    public double TerrainMeters => GridCells * CellSize;
+
+    /// <summary>Derived (read-only): metres per pixel of the source image.</summary>
+    public double Resolution =>
+        TerrainMeters > 0 && SatSourcePx > 0 ? TerrainMeters / SatSourcePx : 0;
+
+    public string TerrainMetersText => TerrainMeters > 0 ? $"{TerrainMeters:0.###} m" : "—";
+    public string ResolutionText => Resolution > 0 ? $"{Resolution:0.######} m/px" : "—";
+
+    [ObservableProperty] private string _shapeStatus = "Enter the Mapframe values to enable shape overlays.";
 
     public MainViewModel(AppSettings settings)
     {
@@ -57,6 +83,13 @@ public sealed partial class MainViewModel : ObservableObject
         _tileOverlap = settings.TileOverlap;
         _tilesInRow = settings.TilesInRow;
         _tileMaxColors = settings.TileMaxColors;
+        _gridCells = settings.GridCells;
+        _cellSize = settings.CellSize;
+        _satSourcePx = settings.SatSourcePx;
+        _shapeOffsetX = settings.ShapeOffsetX;
+        _shapeOffsetY = settings.ShapeOffsetY;
+        _shapeNudgeX = settings.ShapeNudgeX;
+        _shapeNudgeY = settings.ShapeNudgeY;
         Document.BrushSize = settings.BrushSize;
     }
 
@@ -79,10 +112,41 @@ public sealed partial class MainViewModel : ObservableObject
         Canvas?.SetTileGrid(value, TileSize, TileOverlap, TilesInRow);
     }
 
-    partial void OnTileSizeChanged(int value) => _settings.TileSize = value;
-    partial void OnTileOverlapChanged(int value) => _settings.TileOverlap = value;
-    partial void OnTilesInRowChanged(int value) => _settings.TilesInRow = value;
-    partial void OnTileMaxColorsChanged(int value) => _settings.TileMaxColors = value;
+    partial void OnTileSizeChanged(int value) { _settings.TileSize = value; RefreshShapes(); }
+    partial void OnTileOverlapChanged(int value) { _settings.TileOverlap = value; RefreshShapes(); }
+    partial void OnTilesInRowChanged(int value) { _settings.TilesInRow = value; RefreshShapes(); }
+    partial void OnTileMaxColorsChanged(int value) { _settings.TileMaxColors = value; RefreshShapes(); }
+
+    partial void OnGridCellsChanged(int value)
+    {
+        _settings.GridCells = value;
+        OnPropertyChanged(nameof(TerrainMeters));
+        OnPropertyChanged(nameof(TerrainMetersText));
+        OnPropertyChanged(nameof(ResolutionText));
+        RefreshShapes();
+    }
+
+    partial void OnCellSizeChanged(double value)
+    {
+        _settings.CellSize = value;
+        OnPropertyChanged(nameof(TerrainMeters));
+        OnPropertyChanged(nameof(TerrainMetersText));
+        OnPropertyChanged(nameof(ResolutionText));
+        RefreshShapes();
+    }
+
+    partial void OnSatSourcePxChanged(int value)
+    {
+        _settings.SatSourcePx = value;
+        OnPropertyChanged(nameof(Resolution));
+        OnPropertyChanged(nameof(ResolutionText));
+        RefreshShapes();
+    }
+
+    partial void OnShapeOffsetXChanged(double value) { _settings.ShapeOffsetX = value; RefreshShapes(); }
+    partial void OnShapeOffsetYChanged(double value) { _settings.ShapeOffsetY = value; RefreshShapes(); }
+    partial void OnShapeNudgeXChanged(double value) { _settings.ShapeNudgeX = value; RefreshShapes(); }
+    partial void OnShapeNudgeYChanged(double value) { _settings.ShapeNudgeY = value; RefreshShapes(); }
 
     // --- file pickers ----------------------------------------------------- //
     [RelayCommand]
@@ -151,6 +215,7 @@ public sealed partial class MainViewModel : ObservableObject
                 Canvas?.SetOverlayOpacity(OverlayOpacity);
                 Canvas?.ReloadDocument();
                 UpdateCoverage();
+                RefreshShapes();
             }
             else if (!string.IsNullOrWhiteSpace(SatmapPath) || !string.IsNullOrWhiteSpace(MaskPath))
             {
@@ -190,6 +255,188 @@ public sealed partial class MainViewModel : ObservableObject
         item.IsArmed = true;
         Document.ArmedRgb = item.PackedRgb;
         ArmedText = $"Painting: {item.Name}  ({item.RgbText})";
+    }
+
+    // --- terrain setup + shape overlays ---------------------------------- //
+    private const double ExtentTolerance = 1.0; // metres of slack at the terrain edge
+
+    /// <summary>
+    /// Validate the terrain setup against the loaded mask. Returns null when the
+    /// setup is complete and consistent, otherwise a message explaining what to fix.
+    /// Nothing is inferred — every value comes from the Mapframe the user entered.
+    /// </summary>
+    private string? SetupProblem()
+    {
+        if (GridCells <= 0 || CellSize <= 0)
+            return "Set Grid size and Cell size (from the Mapframe).";
+        if (SatSourcePx <= 0)
+            return "Set the sat/mask source size (px) from the Mapframe.";
+        if (TileSize <= 0 || TilesInRow <= 0 || TileMaxColors <= 0)
+            return "Set the tile size, tiles-in-row and max colours from the Samplers tab.";
+        if (Document.Mask is null)
+            return "Load a mask to position shapes.";
+        if (Document.Mask.Width != Document.Mask.Height)
+            return $"Loaded mask is {Document.Mask.Width}×{Document.Mask.Height}; it must be square.";
+        if (Document.Mask.Width != SatSourcePx)
+            return $"Loaded mask is {Document.Mask.Width}px but the Mapframe source is {SatSourcePx}px — wrong or stale mask.";
+        return null;
+    }
+
+    /// <summary>Reason this layer's bounding box falls outside the terrain, or null.</summary>
+    private string? ExtentProblem(ShapeLayer layer)
+    {
+        double terr = TerrainMeters;
+        double x0 = ShapeOffsetX - ExtentTolerance, x1 = ShapeOffsetX + terr + ExtentTolerance;
+        double y0 = ShapeOffsetY - ExtentTolerance, y1 = ShapeOffsetY + terr + ExtentTolerance;
+        if (layer.MinX < x0 || layer.MaxX > x1 || layer.MinY < y0 || layer.MaxY > y1)
+            return $"outside terrain extent " +
+                   $"[{ShapeOffsetX:0}–{ShapeOffsetX + terr:0}, {ShapeOffsetY:0}–{ShapeOffsetY + terr:0}]; " +
+                   $"shape spans ({layer.MinX:0},{layer.MinY:0})–({layer.MaxX:0},{layer.MaxY:0})";
+        return null;
+    }
+
+    /// <summary>
+    /// Push the transform + visible layers to the canvas — but only when the setup
+    /// verifies. Anything unverified blocks rendering and reports why (no guessing).
+    /// </summary>
+    private void RefreshShapes()
+    {
+        var problem = SetupProblem();
+        if (problem != null)
+        {
+            ShapeStatus = problem;
+            Canvas?.SetShapeLayers(null);
+            return;
+        }
+
+        // Y is always flipped: TB world origin is bottom-left, image origin is top-left.
+        Canvas?.SetWorldTransform(new WorldToPixel(
+            Document.Mask!.Width, Document.Mask.Height, TerrainMeters, flipY: true,
+            ShapeOffsetX, ShapeOffsetY, ShapeNudgeX, ShapeNudgeY));
+
+        var render = new List<ShapeRenderLayer>();
+        int blocked = 0, shownFiles = 0;
+        foreach (var v in ShapeLayers)
+        {
+            v.ExtentProblem = ExtentProblem(v.Layer);
+            if (v.ExtentProblem != null) { blocked++; continue; }
+            if (!v.IsVisible) continue;
+            shownFiles++;
+
+            if (v.GroupByLayer && v.CanGroup)
+            {
+                foreach (var g in v.Groups)
+                    if (g.IsVisible)
+                        render.Add(new ShapeRenderLayer(v.Name, g.Features,
+                            g.MinX, g.MinY, g.MaxX, g.MaxY, g.Color, v.Opacity));
+            }
+            else
+            {
+                render.Add(new ShapeRenderLayer(v.Name, v.Layer.Features,
+                    v.Layer.MinX, v.Layer.MinY, v.Layer.MaxX, v.Layer.MaxY, v.Color, v.Opacity));
+            }
+        }
+        Canvas?.SetShapeLayers(render);
+
+        ShapeStatus = ShapeLayers.Count == 0
+            ? $"Setup OK ({TerrainMeters:0} m, {Resolution:0.###} m/px). Add shapefile(s)."
+            : blocked > 0
+                ? $"{shownFiles} shown, {blocked} blocked (outside terrain extent — see log)."
+                : $"{shownFiles} file(s) shown.";
+    }
+
+    private void PersistShapes()
+    {
+        _settings.ShapeLayers = ShapeLayers.Select(v => new ShapeLayerSetting
+        {
+            Path = v.Path,
+            ColorArgb = v.Color.ToUInt32(),
+            Visible = v.IsVisible,
+            Opacity = v.Opacity,
+            GroupByLayer = v.GroupByLayer,
+        }).ToList();
+    }
+
+    private ShapeLayerViewModel WireLayer(ShapeLayer layer, string path, Color color,
+        bool visible, double opacity, bool groupByLayer = false)
+    {
+        var vm = new ShapeLayerViewModel(layer, path, color)
+        {
+            IsVisible = visible,
+            Opacity = opacity,
+            GroupByLayer = groupByLayer,
+        };
+        vm.Changed += OnShapeLayerChanged;
+        vm.RemoveRequested += RemoveShapeLayer;
+        return vm;
+    }
+
+    private void OnShapeLayerChanged()
+    {
+        RefreshShapes();
+        PersistShapes();
+    }
+
+    private void RemoveShapeLayer(ShapeLayerViewModel vm)
+    {
+        vm.Changed -= OnShapeLayerChanged;
+        vm.RemoveRequested -= RemoveShapeLayer;
+        ShapeLayers.Remove(vm);
+        Log($"Removed shape layer '{vm.Name}'.");
+        RefreshShapes();
+        PersistShapes();
+    }
+
+    [RelayCommand]
+    private async Task AddShapefilesAsync()
+    {
+        if (Dialogs is null) return;
+        var paths = await Dialogs.OpenFilesAsync("Add shapefile(s)",
+            ("Shapefiles", new[] { "*.shp" }), ("All files", new[] { "*" }));
+        if (paths.Count == 0) return;
+
+        foreach (var path in paths)
+        {
+            try
+            {
+                var layer = await Task.Run(() => ShapefileLoader.Load(path));
+                var color = ShapeLayerViewModel.Palette[ShapeLayers.Count % ShapeLayerViewModel.Palette.Length];
+                ShapeLayers.Add(WireLayer(layer, path, color, visible: true, opacity: 1.0));
+                Log($"Added shape layer '{layer.Name}': {layer.Features.Count} features, " +
+                    $"bbox ({layer.MinX:0},{layer.MinY:0})-({layer.MaxX:0},{layer.MaxY:0}).");
+                var ext = ExtentProblem(layer);
+                if (ext != null) Log($"  ! '{layer.Name}' {ext}");
+            }
+            catch (Exception ex)
+            {
+                Log($"ERROR loading {Path.GetFileName(path)}: {ex.Message}");
+            }
+        }
+
+        RefreshShapes();
+        PersistShapes();
+    }
+
+    /// <summary>Reload shape layers saved in settings (called once after the canvas is wired).</summary>
+    public async Task RestoreSavedShapesAsync()
+    {
+        if (_settings.ShapeLayers.Count == 0) return;
+        foreach (var s in _settings.ShapeLayers)
+        {
+            if (string.IsNullOrWhiteSpace(s.Path) || !File.Exists(s.Path)) continue;
+            try
+            {
+                var layer = await Task.Run(() => ShapefileLoader.Load(s.Path));
+                ShapeLayers.Add(WireLayer(layer, s.Path, Color.FromUInt32(s.ColorArgb),
+                    s.Visible, s.Opacity, s.GroupByLayer));
+                Log($"Restored shape layer '{layer.Name}'.");
+            }
+            catch (Exception ex)
+            {
+                Log($"Could not restore {Path.GetFileName(s.Path)}: {ex.Message}");
+            }
+        }
+        RefreshShapes();
     }
 
     // --- save ------------------------------------------------------------- //
@@ -242,6 +489,11 @@ public sealed partial class MainViewModel : ObservableObject
     private async Task CheckTilesAsync()
     {
         if (Document.Mask is null) { Log("Load a mask first."); return; }
+        if (TileSize <= 0 || TilesInRow <= 0 || TileMaxColors <= 0)
+        {
+            Log("Set tile size, tiles-in-row and max colours (from the Samplers tab) first.");
+            return;
+        }
         IsBusy = true;
         try
         {

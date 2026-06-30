@@ -6,6 +6,7 @@ namespace DayZ.MaskEditor.App.Services;
 public interface IDialogService
 {
     Task<string?> OpenFileAsync(string title, params (string Name, string[] Patterns)[] filters);
+    Task<IReadOnlyList<string>> OpenFilesAsync(string title, params (string Name, string[] Patterns)[] filters);
     Task<string?> SaveFileAsync(string title, string suggestedName, string extension);
 }
 
@@ -30,6 +31,26 @@ public sealed class DialogService : IDialogService
             FileTypeFilter = types,
         });
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+    }
+
+    public async Task<IReadOnlyList<string>> OpenFilesAsync(
+        string title, params (string Name, string[] Patterns)[] filters)
+    {
+        var types = filters.Select(f => new FilePickerFileType(f.Name)
+        {
+            Patterns = f.Patterns,
+        }).ToList();
+
+        var files = await _top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = true,
+            FileTypeFilter = types,
+        });
+        return files.Select(f => f.TryGetLocalPath())
+                    .Where(p => p != null)
+                    .Select(p => p!)
+                    .ToList();
     }
 
     public async Task<string?> SaveFileAsync(string title, string suggestedName, string extension)

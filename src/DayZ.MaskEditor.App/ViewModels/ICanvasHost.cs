@@ -1,4 +1,6 @@
+using DayZ.MaskEditor.App.Models;
 using DayZ.MaskEditor.Core.Masking;
+using DayZ.MaskEditor.Core.Shapes;
 
 namespace DayZ.MaskEditor.App.ViewModels;
 
@@ -26,4 +28,10 @@ public interface ICanvasHost
 
     /// <summary>Highlight pixels matching these stray colours (null clears).</summary>
     void SetStrayHighlights(IReadOnlyCollection<int>? strayRgb);
+
+    /// <summary>Replace the shapefile overlay layers (null/empty clears).</summary>
+    void SetShapeLayers(IReadOnlyList<ShapeRenderLayer>? layers);
+
+    /// <summary>Set the world→pixel transform used to place shapes on the mask.</summary>
+    void SetWorldTransform(WorldToPixel transform);
 }

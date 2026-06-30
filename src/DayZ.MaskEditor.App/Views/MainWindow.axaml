@@ -36,39 +36,174 @@
     <!-- Main body -->
     <Grid Grid.Row="1" ColumnDefinitions="280,*,320">
 
-      <!-- Left: surface browser -->
-      <Border Grid.Column="0" Padding="8" Background="#18000000">
-        <DockPanel>
-          <TextBlock DockPanel.Dock="Top" Text="Surfaces" FontWeight="Bold" Margin="0,0,0,6"/>
-          <Border DockPanel.Dock="Top" Padding="6" Margin="0,0,0,6"
-                  Background="#22000000" CornerRadius="4">
-            <TextBlock Text="{Binding ArmedText}" TextWrapping="Wrap"/>
-          </Border>
-          <ScrollViewer>
-            <ItemsControl ItemsSource="{Binding Surfaces}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Button HorizontalAlignment="Stretch" Margin="0,1" Padding="4"
-                          Command="{Binding #Root.DataContext.ArmSurfaceCommand}"
-                          CommandParameter="{Binding}"
-                          ToolTip.Tip="{Binding Tooltip}">
-                    <Grid ColumnDefinitions="22,*,Auto">
-                      <Border Grid.Column="0" Width="18" Height="18" CornerRadius="2"
-                              Background="{Binding Swatch}"
-                              BorderBrush="#80FFFFFF" BorderThickness="1"/>
-                      <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                        <TextBlock Text="{Binding Name}"/>
-                        <TextBlock Text="{Binding RgbText}" FontSize="10" Opacity="0.6"/>
-                      </StackPanel>
-                      <TextBlock Grid.Column="2" Text="{Binding CoverageText}"
-                                 VerticalAlignment="Center" FontSize="11" Opacity="0.8"/>
-                    </Grid>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
-        </DockPanel>
+      <!-- Left: surfaces + shapes tabs -->
+      <Border Grid.Column="0" Padding="4" Background="#18000000">
+        <TabControl>
+          <TabControl.Styles>
+            <Style Selector="TabItem">
+              <Setter Property="FontSize" Value="14"/>
+              <Setter Property="Padding" Value="8,4"/>
+              <Setter Property="MinHeight" Value="0"/>
+            </Style>
+            <Style Selector="NumericUpDown">
+              <Setter Property="ShowButtonSpinner" Value="False"/>
+            </Style>
+          </TabControl.Styles>
+
+          <!-- Surfaces -->
+          <TabItem Header="Surfaces">
+            <DockPanel Margin="4">
+              <Border DockPanel.Dock="Top" Padding="6" Margin="0,0,0,6"
+                      Background="#22000000" CornerRadius="4">
+                <TextBlock Text="{Binding ArmedText}" TextWrapping="Wrap"/>
+              </Border>
+              <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Surfaces}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button HorizontalAlignment="Stretch" Margin="0,1" Padding="4"
+                              Command="{Binding #Root.DataContext.ArmSurfaceCommand}"
+                              CommandParameter="{Binding}"
+                              ToolTip.Tip="{Binding Tooltip}">
+                        <Grid ColumnDefinitions="22,*,Auto">
+                          <Border Grid.Column="0" Width="18" Height="18" CornerRadius="2"
+                                  Background="{Binding Swatch}"
+                                  BorderBrush="#80FFFFFF" BorderThickness="1"/>
+                          <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                            <TextBlock Text="{Binding Name}"/>
+                            <TextBlock Text="{Binding RgbText}" FontSize="10" Opacity="0.6"/>
+                          </StackPanel>
+                          <TextBlock Grid.Column="2" Text="{Binding CoverageText}"
+                                     VerticalAlignment="Center" FontSize="11" Opacity="0.8"/>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </TabItem>
+
+          <!-- Terrain (Mapframe setup) -->
+          <TabItem Header="Terrain">
+            <ScrollViewer>
+              <StackPanel Margin="4" Spacing="6">
+                <TextBlock Text="Mapframe setup" FontWeight="Bold"/>
+                <TextBlock Text="Copy these from Terrain Builder ▸ Mapframe properties."
+                           FontSize="11" Opacity="0.6" TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" RowSpacing="4"
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Easting (m)" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="-1000000" Maximum="1000000"
+                                 Increment="1000" Value="{Binding ShapeOffsetX}"/>
+                  <TextBlock Grid.Row="1" Grid.Column="0" Text="Northing (m)" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="-1000000" Maximum="1000000"
+                                 Increment="1000" Value="{Binding ShapeOffsetY}"/>
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Grid size (cells)" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="32768"
+                                 Increment="1" Value="{Binding GridCells}"/>
+                  <TextBlock Grid.Row="3" Grid.Column="0" Text="Cell size (m)" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="100000"
+                                 Increment="1" Value="{Binding CellSize}"/>
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Source image (px)" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="131072"
+                                 Increment="256" Value="{Binding SatSourcePx}"/>
+                  <TextBlock Grid.Row="5" Grid.Column="0" Text="Terrain size" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding TerrainMetersText}"
+                             VerticalAlignment="Center" Opacity="0.8"/>
+                  <TextBlock Grid.Row="6" Grid.Column="0" Text="Resolution" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding ResolutionText}"
+                             VerticalAlignment="Center" Opacity="0.8"/>
+                  <TextBlock Grid.Row="7" Grid.Column="0" Text="Tile size (px)" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="7" Grid.Column="1" Minimum="0" Maximum="8192"
+                                 Increment="1" Value="{Binding TileSize}"/>
+                  <TextBlock Grid.Row="8" Grid.Column="0" Text="Actual overlap (px)" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="8" Grid.Column="1" Minimum="0" Maximum="4096"
+                                 Increment="1" Value="{Binding TileOverlap}"/>
+                  <TextBlock Grid.Row="9" Grid.Column="0" Text="Tiles in row" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="9" Grid.Column="1" Minimum="0" Maximum="1024"
+                                 Increment="1" Value="{Binding TilesInRow}"/>
+                  <TextBlock Grid.Row="10" Grid.Column="0" Text="Max colours" VerticalAlignment="Center"/>
+                  <NumericUpDown Grid.Row="10" Grid.Column="1" Minimum="0" Maximum="64"
+                                 Increment="1" Value="{Binding TileMaxColors}"/>
+                </Grid>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+
+          <!-- Shapes (overlay layers) -->
+          <TabItem Header="Shapes">
+            <DockPanel Margin="4">
+              <StackPanel DockPanel.Dock="Top" Spacing="6">
+                <Border Padding="6" Background="#22000000" CornerRadius="4">
+                  <TextBlock Text="{Binding ShapeStatus}" TextWrapping="Wrap" FontSize="11"/>
+                </Border>
+                <Button HorizontalAlignment="Stretch" Content="Add shapefile(s)…"
+                        Command="{Binding AddShapefilesCommand}"/>
+              </StackPanel>
+
+              <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding ShapeLayers}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Margin="0,2" Padding="6" Background="#22000000" CornerRadius="4">
+                        <StackPanel Spacing="4">
+                          <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                            <Button Grid.Column="0" Width="20" Height="20" Padding="0"
+                                    Background="{Binding Swatch}"
+                                    Command="{Binding CycleColorCommand}"
+                                    ToolTip.Tip="Click to change colour"/>
+                            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                              <TextBlock Text="{Binding Name}"/>
+                              <TextBlock Text="{Binding FeatureCount, StringFormat='{}{0} features'}"
+                                         FontSize="10" Opacity="0.6"/>
+                            </StackPanel>
+                            <CheckBox Grid.Column="2" IsChecked="{Binding IsVisible}"
+                                      VerticalAlignment="Center" ToolTip.Tip="Visible"/>
+                            <Button Grid.Column="3" Content="✕" Padding="6,2"
+                                    Command="{Binding RemoveCommand}" ToolTip.Tip="Remove layer"/>
+                          </Grid>
+                          <Slider Minimum="0.1" Maximum="1" Value="{Binding Opacity}"/>
+                          <TextBlock Text="{Binding ExtentProblem, StringFormat='⚠ {0}'}"
+                                     IsVisible="{Binding HasProblem}"
+                                     Foreground="#FF6060" FontSize="10" TextWrapping="Wrap"/>
+                          <CheckBox Content="Colour by TB layer" FontSize="11"
+                                    IsVisible="{Binding CanGroup}"
+                                    IsChecked="{Binding GroupByLayer}"
+                                    ToolTip.Tip="Groups by the shape's Terrain Builder layer (the __LAYER field) — these are TB layers, not DayZ surfaces."/>
+                          <TextBlock Text="Terrain Builder layers — not DayZ surfaces"
+                                     IsVisible="{Binding GroupByLayer}"
+                                     FontSize="9" Opacity="0.55" FontStyle="Italic"
+                                     Margin="8,0,0,0" TextWrapping="Wrap"/>
+                          <ItemsControl ItemsSource="{Binding Groups}" Margin="8,0,0,0"
+                                        IsVisible="{Binding GroupByLayer}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,1" ColumnSpacing="4">
+                                  <Button Grid.Column="0" Width="13" Height="13" Padding="0"
+                                          Background="{Binding Swatch}"
+                                          Command="{Binding CycleColorCommand}"
+                                          ToolTip.Tip="Change colour"/>
+                                  <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="10"
+                                             VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                  <TextBlock Grid.Column="2" Text="{Binding Count}" FontSize="9"
+                                             Opacity="0.5" VerticalAlignment="Center"/>
+                                  <CheckBox Grid.Column="3" IsChecked="{Binding IsVisible}"
+                                            ToolTip.Tip="Visible"/>
+                                </Grid>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </TabItem>
+
+        </TabControl>
       </Border>
 
       <!-- Center: editing canvas -->
@@ -94,24 +229,7 @@
             <TextBlock Text="Validate (report only)" FontWeight="Bold"/>
             <Button HorizontalAlignment="Stretch" Content="Check legend colours"
                     Command="{Binding CheckLegendCommand}" IsEnabled="{Binding !IsBusy}"/>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="6" RowDefinitions="Auto,Auto" RowSpacing="4">
-              <StackPanel Grid.Row="0" Grid.Column="0">
-                <TextBlock Text="Tile size" FontSize="11"/>
-                <NumericUpDown Minimum="1" Maximum="8192" Increment="1" Value="{Binding TileSize}"/>
-              </StackPanel>
-              <StackPanel Grid.Row="0" Grid.Column="1">
-                <TextBlock Text="Overlap" FontSize="11"/>
-                <NumericUpDown Minimum="0" Maximum="4096" Increment="1" Value="{Binding TileOverlap}"/>
-              </StackPanel>
-              <StackPanel Grid.Row="1" Grid.Column="0">
-                <TextBlock Text="Tiles / row" FontSize="11"/>
-                <NumericUpDown Minimum="1" Maximum="1024" Increment="1" Value="{Binding TilesInRow}"/>
-              </StackPanel>
-              <StackPanel Grid.Row="1" Grid.Column="1">
-                <TextBlock Text="Max colours" FontSize="11"/>
-                <NumericUpDown Minimum="1" Maximum="64" Increment="1" Value="{Binding TileMaxColors}"/>
-              </StackPanel>
-            </Grid>
+            <TextBlock Text="Tile parameters are on the Terrain tab." FontSize="10" Opacity="0.6"/>
             <Button HorizontalAlignment="Stretch" Content="Check colours per tile"
                     Command="{Binding CheckTilesCommand}" IsEnabled="{Binding !IsBusy}"/>
             <CheckBox Content="Show tile grid" IsChecked="{Binding ShowTileGrid}"/>

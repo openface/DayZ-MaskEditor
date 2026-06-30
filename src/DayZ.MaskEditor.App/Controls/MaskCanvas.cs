@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -7,6 +9,7 @@ using Avalonia.Platform;
 using DayZ.MaskEditor.App.Models;
 using DayZ.MaskEditor.App.ViewModels;
 using DayZ.MaskEditor.Core.Masking;
+using DayZ.MaskEditor.Core.Shapes;
 
 namespace DayZ.MaskEditor.App.Controls;
 
@@ -35,6 +38,15 @@ public sealed class MaskCanvas : Control, ICanvasHost
     private int _gridTile, _gridOverlap, _gridNt;
     private IReadOnlyList<OverLimitTile>? _tileHighlights;
     private HashSet<int>? _strayHighlights;
+
+    // Shapefile overlays
+    private IReadOnlyList<ShapeRenderLayer>? _shapeLayers;
+    private WorldToPixel? _worldToPixel;
+
+    // Hover tooltip
+    private string? _hoverText;
+    private Point _hoverPos;
+    private const double HoverTolerancePx = 6;
 
     // Interaction state
     private bool _painting;
@@ -88,6 +100,20 @@ public sealed class MaskCanvas : Control, ICanvasHost
     {
         _strayHighlights = strayRgb is null ? null : new HashSet<int>(strayRgb);
         RecomposeAll();
+    }
+
+    public void SetShapeLayers(IReadOnlyList<ShapeRenderLayer>? layers)
+    {
+        _shapeLayers = layers;
+        _hoverText = null;
+        InvalidateVisual();
+    }
+
+    public void SetWorldTransform(WorldToPixel transform)
+    {
+        _worldToPixel = transform;
+        _hoverText = null;
+        InvalidateVisual();
     }
 
     public void FitToView()
@@ -224,6 +250,8 @@ public sealed class MaskCanvas : Control, ICanvasHost
 
         DrawTileGrid(context);
         DrawTileHighlights(context);
+        DrawShapes(context);
+        DrawHoverTooltip(context);
     }
 
     private void DrawTileGrid(DrawingContext ctx)
@@ -255,6 +283,216 @@ public sealed class MaskCanvas : Control, ICanvasHost
         }
     }
 
+    private void DrawShapes(DrawingContext ctx)
+    {
+        if (_shapeLayers is null || _shapeLayers.Count == 0 || _worldToPixel is not { } w2p)
+            return;
+
+        // Viewport in image space (with a small margin), for part-level culling.
+        double vL = _originX - 2, vT = _originY - 2;
+        double vR = _originX + Bounds.Width / _zoom + 2;
+        double vB = _originY + Bounds.Height / _zoom + 2;
+
+        foreach (var layer in _shapeLayers)
+        {
+            if (layer.Features.Count == 0) continue;
+
+            byte a = (byte)Math.Clamp(layer.Opacity * 255, 0, 255);
+            var stroke = new Pen(
+                new SolidColorBrush(Color.FromArgb(a, layer.Color.R, layer.Color.G, layer.Color.B)),
+                1.5);
+            var fill = new SolidColorBrush(
+                Color.FromArgb((byte)(a * 0.25), layer.Color.R, layer.Color.G, layer.Color.B));
+
+            foreach (var feature in layer.Features)
+            {
+                foreach (var part in feature.Parts)
+                {
+                    if (part.Count == 0) continue;
+
+                    if (feature.Kind == ShapeKind.Point)
+                    {
+                        var (ix, iy) = w2p.ToPixel(part[0]);
+                        if (ix < vL || ix > vR || iy < vT || iy > vB) continue;
+                        var c = new Point((ix - _originX) * _zoom, (iy - _originY) * _zoom);
+                        ctx.DrawEllipse(stroke.Brush, null, c, 3, 3);
+                        continue;
+                    }
+
+                    // Convert part to image space + bbox for culling.
+                    double pMinX = double.MaxValue, pMinY = double.MaxValue;
+                    double pMaxX = double.MinValue, pMaxY = double.MinValue;
+                    var imgPts = new (double X, double Y)[part.Count];
+                    for (int i = 0; i < part.Count; i++)
+                    {
+                        var (px, py) = w2p.ToPixel(part[i]);
+                        imgPts[i] = (px, py);
+                        if (px < pMinX) pMinX = px;
+                        if (py < pMinY) pMinY = py;
+                        if (px > pMaxX) pMaxX = px;
+                        if (py > pMaxY) pMaxY = py;
+                    }
+                    if (pMaxX < vL || pMinX > vR || pMaxY < vT || pMinY > vB) continue;
+
+                    bool polygon = feature.Kind == ShapeKind.Polygon;
+                    var geo = new StreamGeometry();
+                    using (var g = geo.Open())
+                    {
+                        g.BeginFigure(ToScreen(imgPts[0]), isFilled: polygon);
+                        for (int i = 1; i < imgPts.Length; i++)
+                            g.LineTo(ToScreen(imgPts[i]));
+                        g.EndFigure(polygon);
+                    }
+                    ctx.DrawGeometry(polygon ? fill : null, stroke, geo);
+                }
+            }
+        }
+    }
+
+    private Point ToScreen((double X, double Y) img) =>
+        new((img.X - _originX) * _zoom, (img.Y - _originY) * _zoom);
+
+    // ----------------------------------------------------------------- hover
+    private void UpdateHover(Point pos)
+    {
+        var text = HitTestShapes(pos);
+        if (text is null)
+        {
+            if (_hoverText != null) { _hoverText = null; InvalidateVisual(); }
+            return;
+        }
+        _hoverText = text;
+        _hoverPos = pos;
+        InvalidateVisual();
+    }
+
+    private string? HitTestShapes(Point pos)
+    {
+        if (_shapeLayers is null || _shapeLayers.Count == 0 || _worldToPixel is not { } w2p)
+            return null;
+
+        var (cx, cy) = ScreenToImage(pos);
+        double tol = HoverTolerancePx / _zoom;
+        double tolSq = tol * tol;
+
+        foreach (var layer in _shapeLayers)
+        {
+            // Layer bounding-box cull (world → image).
+            var (a, b) = w2p.ToPixel(new WorldPoint(layer.MinX, layer.MinY));
+            var (c, d) = w2p.ToPixel(new WorldPoint(layer.MaxX, layer.MaxY));
+            if (cx < Math.Min(a, c) - tol || cx > Math.Max(a, c) + tol ||
+                cy < Math.Min(b, d) - tol || cy > Math.Max(b, d) + tol)
+                continue;
+
+            foreach (var feature in layer.Features)
+            {
+                foreach (var part in feature.Parts)
+                {
+                    if (part.Count == 0) continue;
+
+                    double pminx = double.MaxValue, pminy = double.MaxValue;
+                    double pmaxx = double.MinValue, pmaxy = double.MinValue;
+                    var pts = new (double X, double Y)[part.Count];
+                    for (int i = 0; i < part.Count; i++)
+                    {
+                        pts[i] = w2p.ToPixel(part[i]);
+                        if (pts[i].X < pminx) pminx = pts[i].X;
+                        if (pts[i].Y < pminy) pminy = pts[i].Y;
+                        if (pts[i].X > pmaxx) pmaxx = pts[i].X;
+                        if (pts[i].Y > pmaxy) pmaxy = pts[i].Y;
+                    }
+                    if (cx < pminx - tol || cx > pmaxx + tol || cy < pminy - tol || cy > pmaxy + tol)
+                        continue;
+
+                    bool hit = feature.Kind switch
+                    {
+                        ShapeKind.Point => Dist2(cx, cy, pts[0].X, pts[0].Y) <= tolSq,
+                        ShapeKind.Polygon => PointInPolygon(cx, cy, pts) || NearAnySegment(cx, cy, pts, tolSq),
+                        _ => NearAnySegment(cx, cy, pts, tolSq),
+                    };
+                    if (hit) return BuildHoverText(layer.Name, feature);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static string BuildHoverText(string layerName, ShapeFeature feature)
+    {
+        var sb = new StringBuilder();
+        sb.Append(layerName).Append('\n').Append(feature.Kind);
+        foreach (var kv in feature.Attributes)
+            sb.Append('\n').Append(FriendlyAttr(kv.Key)).Append(": ").Append(kv.Value);
+        return sb.ToString();
+    }
+
+    // Terrain Builder's __LAYER/__ID are TB layer metadata, NOT DayZ surfaces —
+    // label them so the tooltip can't be mistaken for a surface assignment.
+    private static string FriendlyAttr(string key) => key.ToUpperInvariant() switch
+    {
+        "__LAYER" => "TB layer",
+        "__ID" => "TB id",
+        _ => key,
+    };
+
+    private static double Dist2(double ax, double ay, double bx, double by)
+    {
+        double dx = ax - bx, dy = ay - by;
+        return dx * dx + dy * dy;
+    }
+
+    private static bool NearAnySegment(double px, double py, (double X, double Y)[] pts, double tolSq)
+    {
+        for (int i = 0; i < pts.Length - 1; i++)
+            if (SegDist2(px, py, pts[i].X, pts[i].Y, pts[i + 1].X, pts[i + 1].Y) <= tolSq)
+                return true;
+        return false;
+    }
+
+    private static double SegDist2(double px, double py, double ax, double ay, double bx, double by)
+    {
+        double dx = bx - ax, dy = by - ay;
+        double len2 = dx * dx + dy * dy;
+        double t = len2 <= 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / len2;
+        t = Math.Clamp(t, 0, 1);
+        double qx = ax + t * dx, qy = ay + t * dy;
+        return Dist2(px, py, qx, qy);
+    }
+
+    private static bool PointInPolygon(double px, double py, (double X, double Y)[] pts)
+    {
+        bool inside = false;
+        for (int i = 0, j = pts.Length - 1; i < pts.Length; j = i++)
+        {
+            if (pts[i].Y > py != pts[j].Y > py &&
+                px < (pts[j].X - pts[i].X) * (py - pts[i].Y) / (pts[j].Y - pts[i].Y) + pts[i].X)
+                inside = !inside;
+        }
+        return inside;
+    }
+
+    private void DrawHoverTooltip(DrawingContext ctx)
+    {
+        if (_hoverText is null) return;
+        var ft = new FormattedText(_hoverText, CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight, new Typeface("Consolas"), 12, Brushes.White);
+
+        const double pad = 6;
+        double w = ft.Width + pad * 2, h = ft.Height + pad * 2;
+        double x = _hoverPos.X + 14, y = _hoverPos.Y + 14;
+        if (x + w > Bounds.Width) x = _hoverPos.X - w - 14;
+        if (y + h > Bounds.Height) y = _hoverPos.Y - h - 14;
+        x = Math.Max(0, x);
+        y = Math.Max(0, y);
+
+        var rect = new Rect(x, y, w, h);
+        ctx.DrawRectangle(
+            new SolidColorBrush(Color.FromArgb(235, 25, 25, 25)),
+            new Pen(new SolidColorBrush(Color.FromArgb(200, 150, 150, 150)), 1),
+            rect, 4, 4);
+        ctx.DrawText(ft, new Point(x + pad, y + pad));
+    }
+
     // ----------------------------------------------------------------- input
     private (double X, double Y) ScreenToImage(Point p) =>
         (_originX + p.X / _zoom, _originY + p.Y / _zoom);
@@ -265,6 +503,7 @@ public sealed class MaskCanvas : Control, ICanvasHost
         Focus();
         var pt = e.GetCurrentPoint(this);
         _lastPointer = pt.Position;
+        _hoverText = null; // hide tooltip while interacting
 
         if (pt.Properties.IsMiddleButtonPressed || pt.Properties.IsRightButtonPressed)
         {
@@ -301,6 +540,10 @@ public sealed class MaskCanvas : Control, ICanvasHost
             PaintStroke(_lastImgX, _lastImgY, ix, iy);
             _lastImgX = ix; _lastImgY = iy;
         }
+        else
+        {
+            UpdateHover(pos);
+        }
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -309,6 +552,12 @@ public sealed class MaskCanvas : Control, ICanvasHost
         _painting = false;
         _panning = false;
         e.Pointer.Capture(null);
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (_hoverText != null) { _hoverText = null; InvalidateVisual(); }
     }
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)

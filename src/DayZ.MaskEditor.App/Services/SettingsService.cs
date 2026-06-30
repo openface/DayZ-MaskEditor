@@ -23,6 +23,16 @@ public sealed class AppSettings
 
     public double OverlayOpacity { get; set; } = 0.6;
 
+    // --- terrain setup (mirrors the Terrain Builder Mapframe) ---
+    public int GridCells { get; set; }                 // Mapframe grid size (cells)
+    public double CellSize { get; set; }               // Mapframe cell size (m)
+    public int SatSourcePx { get; set; }               // sat/mask source image size (px)
+    public double ShapeOffsetX { get; set; }           // Mapframe Easting (m)
+    public double ShapeOffsetY { get; set; }           // Mapframe Northing (m)
+    public double ShapeNudgeX { get; set; }
+    public double ShapeNudgeY { get; set; }
+    public List<ShapeLayerSetting> ShapeLayers { get; set; } = new();
+
     public double WinWidth { get; set; } = 1200;
     public double WinHeight { get; set; } = 800;
 
@@ -30,6 +40,16 @@ public sealed class AppSettings
     public string FilePath { get; set; } = SettingsService.DefaultPath;
 
     public void Save() => SettingsService.Save(this);
+}
+
+/// <summary>Persisted style + path for one shapefile overlay layer.</summary>
+public sealed class ShapeLayerSetting
+{
+    public string Path { get; set; } = "";
+    public uint ColorArgb { get; set; }
+    public bool Visible { get; set; } = true;
+    public double Opacity { get; set; } = 1.0;
+    public bool GroupByLayer { get; set; }
 }
 
 public static class SettingsService
