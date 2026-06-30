@@ -26,8 +26,9 @@ public interface ICanvasHost
 
     void SetTileGrid(bool show, int tileSize, int overlap, int tilesInRow);
 
-    /// <summary>Highlight over-limit tiles from the per-tile check (null clears).</summary>
-    void SetTileHighlights(IReadOnlyList<OverLimitTile>? tiles);
+    /// <summary>Highlight over-limit tiles from the per-tile check (null clears).
+    /// <paramref name="maxColors"/> is the per-tile limit, shown on each tile badge.</summary>
+    void SetTileHighlights(IReadOnlyList<OverLimitTile>? tiles, int maxColors);
 
     /// <summary>Highlight pixels matching these stray colours (null clears).</summary>
     void SetStrayHighlights(IReadOnlyCollection<int>? strayRgb);

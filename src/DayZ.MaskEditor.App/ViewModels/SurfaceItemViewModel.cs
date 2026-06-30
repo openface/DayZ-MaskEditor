@@ -1,4 +1,5 @@
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DayZ.MaskEditor.Core.Config;
 
@@ -19,6 +20,10 @@ public sealed partial class SurfaceItemViewModel : ObservableObject
     public string Tooltip =>
         $"{Name}\nRGB {RgbText}" + (Material != null ? $"\nmaterial: {Material}" : "");
 
+    /// <summary>Texture preview (96×96), or null when no thumbnail exists for this surface.</summary>
+    public Bitmap? Thumbnail { get; }
+    public bool HasThumbnail => Thumbnail is not null;
+
     [ObservableProperty] private bool _isArmed;
     [ObservableProperty] private double _coveragePercent;
 
@@ -26,9 +31,10 @@ public sealed partial class SurfaceItemViewModel : ObservableObject
         ? $"{CoveragePercent:0.0}%"
         : "";
 
-    public SurfaceItemViewModel(Surface surface)
+    public SurfaceItemViewModel(Surface surface, Bitmap? thumbnail = null)
     {
         Surface = surface;
+        Thumbnail = thumbnail;
         Swatch = new SolidColorBrush(Color.FromRgb(surface.Rgb.R, surface.Rgb.G, surface.Rgb.B));
     }
 

@@ -15,7 +15,10 @@ pixel/tile logic was ported faithfully (and pinned by the same unit tests) into
 
 - **Load** `layers.cfg` (Arma/DayZ config format), satmap, and mask.
 - **Surface browser / fixed palette** — one swatch per legend colour, with live
-  coverage %. Click to arm; only legend colours are paintable.
+  coverage %. Hover a surface to preview its texture thumbnail (bundled set, or a
+  per-terrain `thumbnails/` folder next to `layers.cfg`). Click to arm (only legend
+  colours are paintable); the armed surface gets an amber outline. Click it again or
+  press **Esc** to stop painting.
 - **Overlay editor** — mask drawn over the satmap with an opacity slider; pan
   (middle/right-drag), zoom (wheel), fit-to-view. Renders only the visible viewport,
   so 15360²-class terrains stay responsive.

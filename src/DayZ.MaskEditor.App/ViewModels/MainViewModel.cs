@@ -114,6 +114,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _settings.BrushSize = value;
         Document.BrushSize = value;
+        Canvas?.InvalidateView(); // resize the brush ring under a stationary cursor
     }
 
     partial void OnOverlayOpacityChanged(double value)
@@ -257,7 +258,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Surfaces.Clear();
         foreach (var s in cfg.Surfaces)
-            Surfaces.Add(new SurfaceItemViewModel(s));
+            Surfaces.Add(new SurfaceItemViewModel(s, ThumbnailService.Load(s.Name, CfgPath)));
         ArmedSurface = null;
         Document.ArmedRgb = -1;
         ArmedText = "Pick a surface to paint";
@@ -271,11 +272,25 @@ public sealed partial class MainViewModel : ObservableObject
     private void ArmSurface(SurfaceItemViewModel? item)
     {
         if (item is null) return;
+        if (ReferenceEquals(ArmedSurface, item)) { Disarm(); return; } // click armed → unarm
         if (ArmedSurface != null) ArmedSurface.IsArmed = false;
         ArmedSurface = item;
         item.IsArmed = true;
         Document.ArmedRgb = item.PackedRgb;
         ArmedText = $"Painting: {item.Name}  ({item.RgbText})";
+        Canvas?.InvalidateView(); // recolour the brush ring immediately
+    }
+
+    /// <summary>Stop painting — clears the armed surface (Esc, or click the armed one).</summary>
+    [RelayCommand]
+    private void Disarm()
+    {
+        if (ArmedSurface is null) return;
+        ArmedSurface.IsArmed = false;
+        ArmedSurface = null;
+        Document.ArmedRgb = -1;
+        ArmedText = "Pick a surface to paint";
+        Canvas?.InvalidateView(); // hide the brush ring
     }
 
     // --- terrain setup + shape overlays ---------------------------------- //
@@ -571,7 +586,7 @@ public sealed partial class MainViewModel : ObservableObject
             var res = await Task.Run(() => Validation.CheckTiles(mask, ts, ov, nt, mx));
             ReportTiles(res);
             HasOverLimitTiles = res.OverLimit.Count > 0;
-            Canvas?.SetTileHighlights(res.OverLimit.Count > 0 ? res.OverLimit : null);
+            Canvas?.SetTileHighlights(res.OverLimit.Count > 0 ? res.OverLimit : null, res.MaxColors);
         }
         finally { IsBusy = false; }
     }
@@ -603,7 +618,7 @@ public sealed partial class MainViewModel : ObservableObject
             var res = await Task.Run(() => Validation.CheckTiles(mask, ts, ov, nt, mx));
             ReportTiles(res);
             HasOverLimitTiles = res.OverLimit.Count > 0;
-            Canvas?.SetTileHighlights(res.OverLimit.Count > 0 ? res.OverLimit : null);
+            Canvas?.SetTileHighlights(res.OverLimit.Count > 0 ? res.OverLimit : null, res.MaxColors);
         }
         finally { IsBusy = false; }
     }

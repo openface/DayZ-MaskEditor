@@ -37,6 +37,7 @@ public sealed class MaskCanvas : Control, ICanvasHost
     private bool _showGrid;
     private int _gridTile, _gridOverlap, _gridNt;
     private IReadOnlyList<OverLimitTile>? _tileHighlights;
+    private int _tileLimit;
     private HashSet<int>? _strayHighlights;
 
     // Shapefile overlays
@@ -54,10 +55,16 @@ public sealed class MaskCanvas : Control, ICanvasHost
     private Point _lastPointer;
     private double _lastImgX, _lastImgY;
 
+    // Brush cursor (drawn overlay reflecting brush size + armed colour)
+    private Point _cursorPos;
+    private bool _cursorInside;
+
     public MaskCanvas()
     {
         Focusable = true;
         ClipToBounds = true;
+        // Crosshair marks the exact centre pixel; the drawn ring shows size + colour.
+        Cursor = new Cursor(StandardCursorType.Cross);
     }
 
     public EditorDocument? Document
@@ -92,9 +99,10 @@ public sealed class MaskCanvas : Control, ICanvasHost
         InvalidateVisual();
     }
 
-    public void SetTileHighlights(IReadOnlyList<OverLimitTile>? tiles)
+    public void SetTileHighlights(IReadOnlyList<OverLimitTile>? tiles, int maxColors)
     {
         _tileHighlights = tiles;
+        _tileLimit = maxColors;
         InvalidateVisual();
     }
 
@@ -251,9 +259,88 @@ public sealed class MaskCanvas : Control, ICanvasHost
             context.DrawImage(_view, new Rect(0, 0, _viewW, _viewH));
 
         DrawTileGrid(context);
-        DrawTileHighlights(context);
         DrawShapes(context);
+        DrawTileDim(context);        // darken everything outside over-limit tiles
+        DrawTileHighlights(context); // crisp border on top of the dimming
+        DrawTileBadges(context);     // colour-count badge per failed tile
         DrawHoverTooltip(context);
+        DrawBrushCursor(context);
+    }
+
+    /// <summary>
+    /// Darken the whole canvas except the over-limit tiles, so failed tiles stand out
+    /// as the only full-brightness areas. Uses an even-odd geometry (full-canvas rect
+    /// with each tile punched out as a hole) — no per-pixel cost.
+    /// </summary>
+    private void DrawTileDim(DrawingContext ctx)
+    {
+        if (_tileHighlights is null || _tileHighlights.Count == 0) return;
+
+        var group = new GeometryGroup { FillRule = FillRule.EvenOdd };
+        group.Children.Add(new RectangleGeometry(new Rect(0, 0, Bounds.Width, Bounds.Height)));
+        foreach (var t in _tileHighlights)
+        {
+            double sxp = (t.X - _originX) * _zoom;
+            double syp = (t.Y - _originY) * _zoom;
+            group.Children.Add(new RectangleGeometry(
+                new Rect(sxp, syp, t.W * _zoom, t.H * _zoom)));
+        }
+        ctx.DrawGeometry(new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), null, group);
+    }
+
+    /// <summary>Draw a "colours/limit" badge at the visible top-left of each failed tile.</summary>
+    private void DrawTileBadges(DrawingContext ctx)
+    {
+        if (_tileHighlights is null || _tileHighlights.Count == 0) return;
+
+        var bg = new SolidColorBrush(Color.FromArgb(235, 200, 0, 0));
+        var border = new Pen(Brushes.White, 1);
+        foreach (var t in _tileHighlights)
+        {
+            double sxp = (t.X - _originX) * _zoom;
+            double syp = (t.Y - _originY) * _zoom;
+            // Clamp to the on-screen part of the tile so the badge is always visible.
+            double vx = Math.Max(sxp, 0), vy = Math.Max(syp, 0);
+            double vr = Math.Min(sxp + t.W * _zoom, Bounds.Width);
+            double vb = Math.Min(syp + t.H * _zoom, Bounds.Height);
+            if (vr <= vx || vb <= vy) continue; // tile fully off-screen
+
+            string label = _tileLimit > 0 ? $"{t.ColorCount} / {_tileLimit}" : t.ColorCount.ToString();
+            var ft = new FormattedText(label, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface("Segoe UI", FontStyle.Normal, FontWeight.Bold), 13, Brushes.White);
+
+            const double pad = 4, margin = 3;
+            var rect = new Rect(vx + margin, vy + margin, ft.Width + pad * 2, ft.Height + pad * 2);
+            ctx.DrawRectangle(bg, border, rect, 3, 3);
+            ctx.DrawText(ft, new Point(vx + margin + pad, vy + margin + pad));
+        }
+    }
+
+    /// <summary>
+    /// Draw the brush footprint under the pointer: a translucent disc tinted with the
+    /// armed colour, ringed for crispness with a dark halo so it reads on any
+    /// background. Diameter is the brush size in image px scaled by the current zoom,
+    /// so it matches exactly what a dab will paint. Only shown when a surface is armed
+    /// and a mask is loaded (<see cref="CanPaint"/>).
+    /// </summary>
+    private void DrawBrushCursor(DrawingContext ctx)
+    {
+        if (!_cursorInside || !CanPaint()) return;
+
+        int rgb = _doc!.ArmedRgb;
+        var col = Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+        int size = Math.Max(1, _doc.BrushSize);
+        // True footprint radius; clamp the drawn ring to a visible minimum so the
+        // colour is still readable when zoomed far out (the crosshair marks centre).
+        double rad = Math.Max(2.5, size * _zoom / 2.0);
+
+        var fill = new SolidColorBrush(Color.FromArgb(64, col.R, col.G, col.B));
+        var halo = new Pen(new SolidColorBrush(Color.FromArgb(150, 0, 0, 0)), 3);
+        var ring = new Pen(new SolidColorBrush(col), 1.5);
+
+        ctx.DrawEllipse(fill, null, _cursorPos, rad, rad);
+        ctx.DrawEllipse(null, halo, _cursorPos, rad, rad);
+        ctx.DrawEllipse(null, ring, _cursorPos, rad, rad);
     }
 
     private void DrawTileGrid(DrawingContext ctx)
@@ -276,7 +363,7 @@ public sealed class MaskCanvas : Control, ICanvasHost
     private void DrawTileHighlights(DrawingContext ctx)
     {
         if (_tileHighlights is null) return;
-        var pen = new Pen(new SolidColorBrush(Color.FromArgb(220, 255, 40, 40)), 2);
+        var pen = new Pen(new SolidColorBrush(Color.FromArgb(255, 255, 40, 40)), 2.5);
         foreach (var t in _tileHighlights)
         {
             double sxp = (t.X - _originX) * _zoom;
@@ -526,6 +613,8 @@ public sealed class MaskCanvas : Control, ICanvasHost
     {
         base.OnPointerMoved(e);
         var pos = e.GetPosition(this);
+        _cursorPos = pos;
+        _cursorInside = true;
 
         if (_panning)
         {
@@ -545,6 +634,7 @@ public sealed class MaskCanvas : Control, ICanvasHost
         else
         {
             UpdateHover(pos);
+            if (CanPaint()) InvalidateVisual(); // keep the brush ring tracking the cursor
         }
     }
 
@@ -559,7 +649,9 @@ public sealed class MaskCanvas : Control, ICanvasHost
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (_hoverText != null) { _hoverText = null; InvalidateVisual(); }
+        _cursorInside = false;
+        _hoverText = null;
+        InvalidateVisual();
     }
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)

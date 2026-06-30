@@ -8,6 +8,10 @@
         MinWidth="900" MinHeight="600"
         Title="DayZ Mask Editor">
 
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding DisarmCommand}"/>
+  </Window.KeyBindings>
+
   <Grid RowDefinitions="Auto,*,Auto">
 
     <!-- Setup bar -->
@@ -55,7 +59,14 @@
             <DockPanel Margin="4">
               <Border DockPanel.Dock="Top" Padding="6" Margin="0,0,0,6"
                       Background="#22000000" CornerRadius="4">
-                <TextBlock Text="{Binding ArmedText}" TextWrapping="Wrap"/>
+                <!-- Fixed two-line layout so arming/unarming never shifts the list. -->
+                <StackPanel>
+                  <TextBlock Text="{Binding ArmedText}"
+                             TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                  <TextBlock Text="Click to arm · click again or Esc to stop"
+                             FontSize="10" Opacity="0.55" Margin="0,2,0,0"
+                             TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
               </Border>
               <ScrollViewer>
                 <ItemsControl ItemsSource="{Binding Surfaces}">
@@ -63,8 +74,15 @@
                     <DataTemplate>
                       <Button HorizontalAlignment="Stretch" Margin="0,1" Padding="4"
                               Command="{Binding #Root.DataContext.ArmSurfaceCommand}"
-                              CommandParameter="{Binding}"
-                              ToolTip.Tip="{Binding Tooltip}">
+                              CommandParameter="{Binding}">
+                        <ToolTip.Tip>
+                          <StackPanel MaxWidth="220">
+                            <Image Source="{Binding Thumbnail}" Width="96" Height="96"
+                                   IsVisible="{Binding HasThumbnail}" Stretch="Uniform"
+                                   Margin="0,0,0,6"/>
+                            <TextBlock Text="{Binding Tooltip}" TextWrapping="Wrap"/>
+                          </StackPanel>
+                        </ToolTip.Tip>
                         <Grid ColumnDefinitions="22,*,Auto">
                           <Border Grid.Column="0" Width="18" Height="18" CornerRadius="2"
                                   Background="{Binding Swatch}"
@@ -75,6 +93,10 @@
                           </StackPanel>
                           <TextBlock Grid.Column="2" Text="{Binding CoverageText}"
                                      VerticalAlignment="Center" FontSize="11" Opacity="0.8"/>
+                          <!-- Armed indicator: amber outline over the whole row. -->
+                          <Border Grid.Column="0" Grid.ColumnSpan="3" Margin="-4"
+                                  BorderBrush="#FFE0A000" BorderThickness="2" CornerRadius="3"
+                                  IsHitTestVisible="False" IsVisible="{Binding IsArmed}"/>
                         </Grid>
                       </Button>
                     </DataTemplate>
@@ -216,12 +238,16 @@
         <DockPanel>
           <StackPanel DockPanel.Dock="Top" Spacing="6">
             <TextBlock Text="Brush" FontWeight="Bold"/>
-            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="6" RowSpacing="4">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" VerticalAlignment="Center"/>
-              <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="1" Maximum="4000"
-                             Increment="1" Value="{Binding BrushSize, TargetNullValue=1}"/>
+              <Slider Grid.Row="0" Grid.Column="1" Minimum="1" Maximum="512"
+                      IsSnapToTickEnabled="True" TickFrequency="1"
+                      Value="{Binding BrushSize}"/>
+              <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center"
+                         MinWidth="40" TextAlignment="Right"
+                         Text="{Binding BrushSize, StringFormat='{}{0} px'}"/>
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Overlay" VerticalAlignment="Center"/>
-              <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1"
+              <Slider Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Minimum="0" Maximum="1"
                       Value="{Binding OverlayOpacity}"/>
             </Grid>
 
