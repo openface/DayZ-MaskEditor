@@ -83,13 +83,22 @@
                     <DataTemplate>
                       <Button HorizontalAlignment="Stretch" Margin="0,1" Padding="4"
                               Command="{Binding #Root.DataContext.ArmSurfaceCommand}"
-                              CommandParameter="{Binding}">
+                              CommandParameter="{Binding}"
+                              ToolTip.Placement="Right">
                         <ToolTip.Tip>
-                          <StackPanel MaxWidth="220">
+                          <StackPanel Orientation="Horizontal">
                             <Image Source="{Binding Thumbnail}" Width="96" Height="96"
                                    IsVisible="{Binding HasThumbnail}" Stretch="Uniform"
-                                   Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding Tooltip}" TextWrapping="Wrap"/>
+                                   VerticalAlignment="Top" Margin="0,0,10,0"/>
+                            <!-- Fixed width so long material paths wrap instead of clipping. -->
+                            <StackPanel Width="240" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding Name}" FontWeight="Bold" TextWrapping="Wrap"/>
+                              <TextBlock Text="{Binding RgbText, StringFormat='RGB {0}'}"
+                                         Opacity="0.75" Margin="0,3,0,0"/>
+                              <TextBlock Text="{Binding Material, StringFormat='material: {0}'}"
+                                         IsVisible="{Binding HasMaterial}" Opacity="0.6"
+                                         TextWrapping="Wrap" Margin="0,3,0,0"/>
+                            </StackPanel>
                           </StackPanel>
                         </ToolTip.Tip>
                         <Grid ColumnDefinitions="22,*,Auto">

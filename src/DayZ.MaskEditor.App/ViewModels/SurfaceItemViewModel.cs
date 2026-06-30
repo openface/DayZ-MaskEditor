@@ -17,6 +17,7 @@ public sealed partial class SurfaceItemViewModel : ObservableObject
     public IBrush Swatch { get; }
     public string RgbText => $"{Rgb.R}, {Rgb.G}, {Rgb.B}";
     public string? Material => Surface.Material;
+    public bool HasMaterial => !string.IsNullOrWhiteSpace(Material);
     public string Tooltip =>
         $"{Name}\nRGB {RgbText}" + (Material != null ? $"\nmaterial: {Material}" : "");
 

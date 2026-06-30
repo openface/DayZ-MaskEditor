@@ -46,7 +46,8 @@ public static class ThumbnailService
         // 2. Bundled asset (cached, including misses).
         if (_assetCache.TryGetValue(key, out var cached)) return cached;
         Bitmap? bmp = null;
-        var uri = new Uri($"avares://DayZ.MaskEditor.App/Assets/Thumbnails/{key}.png");
+        // avares authority is the ASSEMBLY name (DayZ.MaskEditor), not the namespace.
+        var uri = new Uri($"avares://DayZ.MaskEditor/Assets/Thumbnails/{key}.png");
         try { if (AssetLoader.Exists(uri)) bmp = new Bitmap(AssetLoader.Open(uri)); }
         catch { bmp = null; }
         _assetCache[key] = bmp;
