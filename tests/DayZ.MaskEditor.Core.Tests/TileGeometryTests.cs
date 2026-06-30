@@ -39,6 +39,28 @@ public class TileGeometryTests
         return cover.Count == inside;
     }
 
+    [Fact]
+    public void GridFitsImageMatchesTerrainBuilderLayout()
+    {
+        // Real Deadfall Mapframe: 10240px source, 22 tiles of 512px, ACTUAL overlap 32.
+        // This is the same geometry asserted in TileRegionMatchesMaskColorChecker.
+        Assert.True(TileGeometry.GridFitsImage(512, 32, 22, 10240));
+
+        // The valid source range for those tiles brackets 10240.
+        var (min, max) = TileGeometry.FittingImageSizeRange(512, 32, 22);
+        Assert.True(min <= 10240 && 10240 <= max);
+        Assert.Equal(10097, min);
+        Assert.Equal(10577, max);
+
+        // Using TB's *Desired* overlap (16) instead of Actual (32) no longer fits.
+        Assert.False(TileGeometry.GridFitsImage(512, 16, 22, 10240));
+
+        // Gross mismatches fail; a different terrain size needs a different count.
+        Assert.False(TileGeometry.GridFitsImage(512, 32, 22, 15360));
+        Assert.False(TileGeometry.GridFitsImage(512, 32, 22, 0));
+        Assert.True(TileGeometry.GridFitsImage(512, 32, 32, 15360));
+    }
+
     [Theory]
     [InlineData(5, 5, 100, 100)]    // interior
     [InlineData(0, 0, 100, 100)]    // top-left

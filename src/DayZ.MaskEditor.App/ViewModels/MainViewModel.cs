@@ -126,6 +126,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _settings.ShowTileGrid = value;
         Canvas?.SetTileGrid(value, TileSize, TileOverlap, TilesInRow);
+        if (value && Document.Mask is { } m && TileGridProblem(m.Width) is { } warn)
+            Log($"Tile grid may be misaligned — {warn}");
     }
 
     partial void OnTileSizeChanged(int value) { _settings.TileSize = value; RefreshShapes(); }
@@ -298,7 +300,25 @@ public sealed partial class MainViewModel : ObservableObject
             return $"Loaded mask is {Document.Mask.Width}×{Document.Mask.Height}; it must be square.";
         if (Document.Mask.Width != SatSourcePx)
             return $"Loaded mask is {Document.Mask.Width}px but the Mapframe source is {SatSourcePx}px — wrong or stale mask.";
-        return null;
+        return TileGridProblem(SatSourcePx);
+    }
+
+    /// <summary>
+    /// Reason the entered tile (Samplers) values don't match an image of
+    /// <paramref name="imgSize"/> px, or null when they tile it exactly. Keeps the
+    /// tile grid honest to Terrain Builder: a typo'd tile size / count / overlap
+    /// that doesn't reconcile with the satmap source is caught instead of drawing
+    /// a plausible-but-wrong grid.
+    /// </summary>
+    private string? TileGridProblem(int imgSize)
+    {
+        if (TileSize <= 0 || TilesInRow <= 0) return null; // "not set" handled elsewhere
+        if (TileGeometry.GridFitsImage(TileSize, TileOverlap, TilesInRow, imgSize))
+            return null;
+        var (min, max) = TileGeometry.FittingImageSizeRange(TileSize, TileOverlap, TilesInRow);
+        return $"Tile settings don't match this {imgSize}px terrain: {TilesInRow} tiles of " +
+               $"{TileSize}px (overlap {TileOverlap}) tile a {min}–{max}px source. " +
+               $"Check the Samplers values on the Terrain tab — use TB's *Actual* overlap, not Desired.";
     }
 
     /// <summary>Reason this layer's bounding box falls outside the terrain, or null.</summary>
@@ -538,6 +558,11 @@ public sealed partial class MainViewModel : ObservableObject
             Log("Set tile size, tiles-in-row and max colours (from the Samplers tab) first.");
             return;
         }
+        if (TileGridProblem(Document.Mask.Width) is { } gridProblem)
+        {
+            Log(gridProblem);
+            return;
+        }
         IsBusy = true;
         try
         {
@@ -558,6 +583,11 @@ public sealed partial class MainViewModel : ObservableObject
         if (TileSize <= 0 || TilesInRow <= 0 || TileMaxColors <= 0)
         {
             Log("Set tile size, tiles-in-row and max colours (Terrain tab) first.");
+            return;
+        }
+        if (TileGridProblem(Document.Mask.Width) is { } gridProblem)
+        {
+            Log(gridProblem);
             return;
         }
         IsBusy = true;

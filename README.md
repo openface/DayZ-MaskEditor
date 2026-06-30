@@ -33,8 +33,9 @@ pixel/tile logic was ported faithfully (and pinned by the same unit tests) into
   coordinates are mapped to mask pixels from the **Mapframe values you enter on the
   Terrain tab** (Easting/Northing, grid size, cell size, source px, flip Y) — nothing is
   guessed. The editor blocks rendering and tells you what's wrong if the setup is
-  incomplete, the loaded mask doesn't match the declared source size, or a shapefile
-  falls outside the terrain extent.
+  incomplete, the loaded mask doesn't match the declared source size, the tile
+  (Samplers) values don't tile that source size, or a shapefile falls outside the
+  terrain extent.
 - **Save** the mask back to a lossless PNG (byte-exact).
 - **Auto-update** via Velopack on Windows/macOS/Linux.
 

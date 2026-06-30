@@ -43,6 +43,41 @@ public static class TileGeometry
     }
 
     /// <summary>
+    /// The inclusive source-image size range (px) that a <paramref name="tilesInRow"/>
+    /// grid of (<paramref name="tileSize"/>, <paramref name="overlap"/>) tiles covers
+    /// the way Terrain Builder lays it out. Tiles step by <c>tileSize - overlap</c>
+    /// from 0; the final tile clamps to the edge and is legitimately short. The grid
+    /// fits a source when the last tile is non-empty (lower bound: one fewer tile
+    /// would not reach the edge) and no larger than a full tile (upper bound: one
+    /// more tile is not yet required).
+    /// </summary>
+    public static (int Min, int Max) FittingImageSizeRange(int tileSize, int overlap, int tilesInRow)
+    {
+        int spacing = tileSize - overlap;
+        if (spacing <= 0 || tilesInRow <= 0) return (0, 0);
+        if (tilesInRow == 1) return (1, tileSize);
+        int half = overlap / 2;
+        int lastStart = spacing * (tilesInRow - 1) - half;
+        // lower: the previous (full) tile must not already reach the edge.
+        // upper: the last tile must not exceed a full tile's length.
+        return (lastStart + overlap + 1, lastStart + tileSize + 1);
+    }
+
+    /// <summary>
+    /// True when a <paramref name="tilesInRow"/> grid of (<paramref name="tileSize"/>,
+    /// <paramref name="overlap"/>) tiles spans <paramref name="imgSize"/> the way
+    /// Terrain Builder produced it. False means the entered Samplers values don't
+    /// reconcile with this satmap source size, so the grid would not land on TB's
+    /// real seams.
+    /// </summary>
+    public static bool GridFitsImage(int tileSize, int overlap, int tilesInRow, int imgSize)
+    {
+        if (imgSize <= 0) return false;
+        var (min, max) = FittingImageSizeRange(tileSize, overlap, tilesInRow);
+        return min > 0 && imgSize >= min && imgSize <= max;
+    }
+
+    /// <summary>
     /// Subdivide a tile into the 9 overlap fragments, merging/disabling edge and
     /// corner fragments so the enabled ones partition the tile exactly. Returns
     /// the enabled (W&gt;0, H&gt;0) fragments.
