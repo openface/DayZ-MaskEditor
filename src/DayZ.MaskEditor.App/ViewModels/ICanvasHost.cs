@@ -19,10 +19,16 @@ public interface ICanvasHost
     /// <summary>Recomposite the visible mask after in-place edits (keeps zoom/pan).</summary>
     void RefreshMask();
 
+    /// <summary>Drop paint-undo history (after a whole-mask edit like auto-fix).</summary>
+    void ClearHistory();
+
     /// <summary>Centre and zoom so the whole image is visible.</summary>
     void FitToView();
 
     void SetOverlayOpacity(double opacity);
+
+    /// <summary>Toggle eyedropper mode: left-click samples the mask instead of painting.</summary>
+    void SetEyedropper(bool active);
 
     void SetTileGrid(bool show, int tileSize, int overlap, int tilesInRow);
 

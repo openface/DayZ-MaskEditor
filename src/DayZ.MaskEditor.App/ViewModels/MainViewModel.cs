@@ -268,12 +268,23 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     // --- arming ----------------------------------------------------------- //
+    [ObservableProperty] private bool _isEyedropperActive;
+
+    partial void OnIsEyedropperActiveChanged(bool value) => Canvas?.SetEyedropper(value);
+
     [RelayCommand]
     private void ArmSurface(SurfaceItemViewModel? item)
     {
         if (item is null) return;
         if (ReferenceEquals(ArmedSurface, item)) { Disarm(); return; } // click armed → unarm
-        if (ArmedSurface != null) ArmedSurface.IsArmed = false;
+        Arm(item);
+    }
+
+    /// <summary>Arm a surface for painting (shared by click and the eyedropper).</summary>
+    private void Arm(SurfaceItemViewModel item)
+    {
+        if (ArmedSurface != null && !ReferenceEquals(ArmedSurface, item))
+            ArmedSurface.IsArmed = false;
         ArmedSurface = item;
         item.IsArmed = true;
         Document.ArmedRgb = item.PackedRgb;
@@ -281,10 +292,28 @@ public sealed partial class MainViewModel : ObservableObject
         Canvas?.InvalidateView(); // recolour the brush ring immediately
     }
 
-    /// <summary>Stop painting — clears the armed surface (Esc, or click the armed one).</summary>
+    /// <summary>
+    /// Eyedropper callback: arm the legend surface matching the sampled mask colour.
+    /// One-shot — picking returns to painting with that surface armed.
+    /// </summary>
+    public void PickColor(int rgb)
+    {
+        IsEyedropperActive = false;
+        var match = Surfaces.FirstOrDefault(s => s.PackedRgb == rgb);
+        if (match is null)
+        {
+            Log($"Eyedropper: no legend surface matches RGB {(rgb >> 16) & 255}, " +
+                $"{(rgb >> 8) & 255}, {rgb & 255} (stray colour).");
+            return;
+        }
+        Arm(match);
+    }
+
+    /// <summary>Stop the active tool — cancels the eyedropper and clears the armed surface.</summary>
     [RelayCommand]
     private void Disarm()
     {
+        IsEyedropperActive = false;
         if (ArmedSurface is null) return;
         ArmedSurface.IsArmed = false;
         ArmedSurface = null;
@@ -552,6 +581,7 @@ public sealed partial class MainViewModel : ObservableObject
             long changed = await Task.Run(() => AutoFix.SnapToLegend(mask, surfaces));
             Document.MaskDirty = true;
             Canvas?.RefreshMask();
+            Canvas?.ClearHistory(); // whole-mask edit — paint undo no longer applies
             Log($"Snap to legend: {changed:N0} stray pixel(s) replaced.");
 
             var sum = await Task.Run(() => Validation.CheckLegend(mask, surfaces));
@@ -613,6 +643,7 @@ public sealed partial class MainViewModel : ObservableObject
             int fixedTiles = await Task.Run(() => AutoFix.ConsolidateTiles(mask, ts, ov, nt, mx));
             Document.MaskDirty = true;
             Canvas?.RefreshMask();
+            Canvas?.ClearHistory(); // whole-mask edit — paint undo no longer applies
             Log($"Consolidate tiles: fixed {fixedTiles} over-limit tile(s).");
 
             var res = await Task.Run(() => Validation.CheckTiles(mask, ts, ov, nt, mx));

@@ -59,6 +59,26 @@ public sealed class MaskCanvas : Control, ICanvasHost
     private Point _cursorPos;
     private bool _cursorInside;
 
+    // Eyedropper: left-click samples the mask colour instead of painting.
+    private bool _eyedropper;
+    /// <summary>Raised with the sampled packed RGB when the eyedropper picks a mask pixel.</summary>
+    public Action<int>? ColorPicked;
+
+    // Undo history (paint strokes only). Each entry stores the original RGB of every
+    // pixel one stroke changed, so it restores exactly. Memory is bounded by the
+    // painted area (not the image) and capped to MaxUndo strokes.
+    private sealed class PaintUndo
+    {
+        public Dictionary<int, int> Original = new(); // pixel index → pre-stroke RGB
+        public int AfterColor;                        // colour the stroke painted (uniform)
+        public int MinX, MinY, MaxX, MaxY;
+    }
+    private readonly List<PaintUndo> _undo = new();
+    private readonly List<PaintUndo> _redo = new();
+    private const int MaxUndo = 30;
+    private Dictionary<int, int>? _strokeRec; // non-null while a stroke records
+    private int _sMinX, _sMinY, _sMaxX, _sMaxY;
+
     public MaskCanvas()
     {
         Focusable = true;
@@ -76,6 +96,7 @@ public sealed class MaskCanvas : Control, ICanvasHost
     // ----------------------------------------------------------------- ICanvasHost
     public void ReloadDocument()
     {
+        ClearHistory(); // a freshly loaded mask has no paint history
         EnsureViewBitmap();
         FitToView();
     }
@@ -88,6 +109,12 @@ public sealed class MaskCanvas : Control, ICanvasHost
     {
         _opacity = Math.Clamp(opacity, 0, 1);
         RecomposeAll();
+    }
+
+    public void SetEyedropper(bool active)
+    {
+        _eyedropper = active;
+        InvalidateVisual(); // hide/show the brush ring
     }
 
     public void SetTileGrid(bool show, int tileSize, int overlap, int tilesInRow)
@@ -325,7 +352,7 @@ public sealed class MaskCanvas : Control, ICanvasHost
     /// </summary>
     private void DrawBrushCursor(DrawingContext ctx)
     {
-        if (!_cursorInside || !CanPaint()) return;
+        if (!_cursorInside || !CanPaint() || _eyedropper) return;
 
         int rgb = _doc!.ArmedRgb;
         var col = Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
@@ -599,10 +626,16 @@ public sealed class MaskCanvas : Control, ICanvasHost
             _panning = true;
             e.Pointer.Capture(this);
         }
+        else if (pt.Properties.IsLeftButtonPressed && _eyedropper)
+        {
+            var (ix, iy) = ScreenToImage(pt.Position);
+            SampleColor(ix, iy);
+        }
         else if (pt.Properties.IsLeftButtonPressed && CanPaint())
         {
             _painting = true;
             e.Pointer.Capture(this);
+            BeginStroke();
             var (ix, iy) = ScreenToImage(pt.Position);
             PaintDab(ix, iy);
             _lastImgX = ix; _lastImgY = iy;
@@ -634,16 +667,26 @@ public sealed class MaskCanvas : Control, ICanvasHost
         else
         {
             UpdateHover(pos);
-            if (CanPaint()) InvalidateVisual(); // keep the brush ring tracking the cursor
+            if (CanPaint() && !_eyedropper) InvalidateVisual(); // keep the brush ring tracking the cursor
         }
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        if (_painting) EndStroke();
         _painting = false;
         _panning = false;
         e.Pointer.Capture(null);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        bool shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        if (ctrl && e.Key == Key.Z && !shift) { Undo(); e.Handled = true; }
+        else if (ctrl && (e.Key == Key.Y || (e.Key == Key.Z && shift))) { Redo(); e.Handled = true; }
     }
 
     protected override void OnPointerExited(PointerEventArgs e)
@@ -668,6 +711,16 @@ public sealed class MaskCanvas : Control, ICanvasHost
         _originY = imgY - pos.Y / _zoom;
         RecomposeAll();
         e.Handled = true;
+    }
+
+    // ----------------------------------------------------------------- eyedropper
+    private void SampleColor(double imgX, double imgY)
+    {
+        var mask = _doc?.Mask;
+        if (mask is null) return;
+        int x = (int)Math.Floor(imgX), y = (int)Math.Floor(imgY);
+        if (!InBounds(x, y, mask.Width, mask.Height)) return;
+        ColorPicked?.Invoke(mask.GetRgb(x, y));
     }
 
     // ----------------------------------------------------------------- painting
@@ -700,22 +753,105 @@ public sealed class MaskCanvas : Control, ICanvasHost
         if (minX > maxX || minY > maxY) return;
 
         double rr = radius * radius;
+        int w = mask.Width;
+        var rec = _strokeRec;
         for (int y = minY; y <= maxY; y++)
         {
             double dy = (y + 0.5) - imgY;
             for (int x = minX; x <= maxX; x++)
             {
                 double dx = (x + 0.5) - imgX;
-                if (size <= 2 || dx * dx + dy * dy <= rr)
-                    mask.SetRgb(x, y, rgb);
+                if (size > 2 && dx * dx + dy * dy > rr) continue;
+                // Record the pixel's original colour once, before overwriting it.
+                if (rec != null && rec.TryAdd(y * w + x, mask.GetRgb(x, y)))
+                {
+                    if (x < _sMinX) _sMinX = x;
+                    if (x > _sMaxX) _sMaxX = x;
+                    if (y < _sMinY) _sMinY = y;
+                    if (y > _sMaxY) _sMaxY = y;
+                }
+                mask.SetRgb(x, y, rgb);
             }
         }
         _doc.MaskDirty = true;
+        RecomposeImageRect(minX, minY, maxX, maxY);
+    }
 
-        // Recompose just the touched screen rectangle.
+    /// <summary>Recompose only the screen rectangle covering an image-space region.</summary>
+    private void RecomposeImageRect(int minX, int minY, int maxX, int maxY)
+    {
         double s0x = (minX - _originX) * _zoom, s0y = (minY - _originY) * _zoom;
         double s1x = (maxX + 1 - _originX) * _zoom, s1y = (maxY + 1 - _originY) * _zoom;
         int px = (int)Math.Floor(s0x) - 1, py = (int)Math.Floor(s0y) - 1;
         RecomposeRect(px, py, (int)Math.Ceiling(s1x - s0x) + 2, (int)Math.Ceiling(s1y - s0y) + 2);
+    }
+
+    // ----------------------------------------------------------------- undo
+    private void BeginStroke()
+    {
+        _strokeRec = new Dictionary<int, int>();
+        _sMinX = _sMinY = int.MaxValue;
+        _sMaxX = _sMaxY = int.MinValue;
+    }
+
+    private void EndStroke()
+    {
+        if (_strokeRec is null) return;
+        if (_strokeRec.Count > 0)
+        {
+            // A stroke paints one armed colour throughout, so a single AfterColor
+            // (not a per-pixel map) is enough to re-apply it on redo.
+            _undo.Add(new PaintUndo
+            {
+                Original = _strokeRec,
+                AfterColor = _doc?.ArmedRgb ?? 0,
+                MinX = _sMinX, MinY = _sMinY, MaxX = _sMaxX, MaxY = _sMaxY,
+            });
+            if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
+            _redo.Clear(); // a new edit invalidates the redo chain
+        }
+        _strokeRec = null;
+    }
+
+    /// <summary>Revert the most recent paint stroke (Ctrl+Z).</summary>
+    public void Undo()
+    {
+        if (_undo.Count == 0) return;
+        var mask = _doc?.Mask;
+        if (mask is null) { _undo.Clear(); _redo.Clear(); return; }
+
+        var u = _undo[^1];
+        _undo.RemoveAt(_undo.Count - 1);
+        int w = mask.Width;
+        foreach (var kv in u.Original)
+            mask.SetRgb(kv.Key % w, kv.Key / w, kv.Value);
+        _redo.Add(u);
+        _doc!.MaskDirty = true;
+        RecomposeImageRect(u.MinX, u.MinY, u.MaxX, u.MaxY);
+    }
+
+    /// <summary>Re-apply the most recently undone stroke (Ctrl+Y / Ctrl+Shift+Z).</summary>
+    public void Redo()
+    {
+        if (_redo.Count == 0) return;
+        var mask = _doc?.Mask;
+        if (mask is null) { _undo.Clear(); _redo.Clear(); return; }
+
+        var u = _redo[^1];
+        _redo.RemoveAt(_redo.Count - 1);
+        int w = mask.Width;
+        foreach (int idx in u.Original.Keys)
+            mask.SetRgb(idx % w, idx / w, u.AfterColor);
+        _undo.Add(u);
+        _doc!.MaskDirty = true;
+        RecomposeImageRect(u.MinX, u.MinY, u.MaxX, u.MaxY);
+    }
+
+    /// <summary>Drop all undo/redo history (after load or a whole-mask edit like auto-fix).</summary>
+    public void ClearHistory()
+    {
+        _undo.Clear();
+        _redo.Clear();
+        _strokeRec = null;
     }
 }

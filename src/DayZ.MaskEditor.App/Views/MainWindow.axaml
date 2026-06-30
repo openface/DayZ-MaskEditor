@@ -60,13 +60,22 @@
               <Border DockPanel.Dock="Top" Padding="6" Margin="0,0,0,6"
                       Background="#22000000" CornerRadius="4">
                 <!-- Fixed two-line layout so arming/unarming never shifts the list. -->
-                <StackPanel>
-                  <TextBlock Text="{Binding ArmedText}"
-                             TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                  <TextBlock Text="Click to arm · click again or Esc to stop"
-                             FontSize="10" Opacity="0.55" Margin="0,2,0,0"
-                             TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
+                <DockPanel>
+                  <ToggleButton DockPanel.Dock="Right" VerticalAlignment="Center"
+                                Margin="6,0,0,0" Padding="6"
+                                IsChecked="{Binding IsEyedropperActive}"
+                                ToolTip.Tip="Eyedropper — click a spot on the mask to arm the surface painted there">
+                    <PathIcon Width="16" Height="16"
+                              Data="M20.71 5.63l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-3.12 3.12-1.93-1.91-1.41 1.41 1.42 1.42L3 16.25V21h4.75l8.92-8.92 1.42 1.42 1.41-1.41-1.92-1.92 3.12-3.12c.4-.4.4-1.03.01-1.42zM6.92 19L5 17.08l8.06-8.06 1.92 1.92L6.92 19z"/>
+                  </ToggleButton>
+                  <StackPanel>
+                    <TextBlock Text="{Binding ArmedText}"
+                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="Click to arm · click again or Esc to stop"
+                               FontSize="10" Opacity="0.55" Margin="0,2,0,0"
+                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                  </StackPanel>
+                </DockPanel>
               </Border>
               <ScrollViewer>
                 <ItemsControl ItemsSource="{Binding Surfaces}">
