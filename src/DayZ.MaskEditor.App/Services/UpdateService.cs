@@ -4,16 +4,17 @@ using Velopack.Sources;
 namespace DayZ.MaskEditor.App.Services;
 
 /// <summary>
-/// Velopack auto-update against a GitHub Releases feed. No-ops when the app is
-/// running uninstalled (e.g. a dev build), so it is safe to call on every start.
+/// Velopack auto-update against the GitHub Releases feed of the openface/devtwo.com
+/// repo (which also serves the project's download page via GitHub Pages). No-ops when
+/// the app is running uninstalled (e.g. a dev build), so it is safe to call on start.
 /// </summary>
 public static class UpdateService
 {
     /// <summary>
-    /// The release feed. Point this at the repository that hosts the published
+    /// The release feed. Points at the public GitHub repo that hosts the published
     /// Velopack releases. Override at runtime via the DAYZMASK_UPDATE_URL env var.
     /// </summary>
-    public const string DefaultRepoUrl = "https://github.com/greenhell/DayZ-MaskEditor";
+    public const string DefaultRepoUrl = "https://github.com/openface/devtwo.com";
 
     public static string RepoUrl =>
         Environment.GetEnvironmentVariable("DAYZMASK_UPDATE_URL") is { Length: > 0 } u
