@@ -13,7 +13,7 @@ dotnet tool install -g vpk
 
 The app calls `VelopackApp.Build().Run()` first thing in `Program.cs`, and checks
 for updates on startup via `Services/UpdateService.cs`. Update the feed URL there
-(`DefaultRepoUrl`) or set the `DAYZMASK_UPDATE_URL` env var.
+(`DefaultFeedUrl`) or set the `DAYZMASK_UPDATE_URL` env var.
 
 **Windows**
 
@@ -34,10 +34,10 @@ Each produces, under `releases/<runtime>/`:
 
 ## Publishing a release / enabling auto-update
 
-Releases are hosted on the **GitHub Releases** of
-[`openface/devtwo.com`](https://github.com/openface/devtwo.com) — the same repo that
-serves the public download page via GitHub Pages. `UpdateService.DefaultRepoUrl` already
-points there (override per-machine with `DAYZMASK_UPDATE_URL`).
+The update feed is a **static directory served from the devtwo.com VPS** at
+`https://devtwo.com/downloads/dayz-mask-editor/`. The app reads it via Velopack's
+`SimpleWebSource` (`UpdateService.DefaultFeedUrl`; override per-machine with
+`DAYZMASK_UPDATE_URL`). Publishing = pack locally, then **FTP the feed folder up**.
 
 1. Bump the version and pack (Windows):
 
@@ -45,21 +45,24 @@ points there (override per-machine with `DAYZMASK_UPDATE_URL`).
    build\pack-windows.ps1 -Version X.Y.Z
    ```
 
-   This produces, under `releases\win-x64\`: `RELEASES`, `DayZ.MaskEditor-X.Y.Z-full.nupkg`
-   (plus delta `.nupkg` packages once a prior release exists), `DayZ.MaskEditor-win-Setup.exe`,
-   and `DayZ.MaskEditor-win-Portable.zip`.
+   This appends to `releases\win-x64\`, producing `RELEASES`,
+   `DayZ.MaskEditor-X.Y.Z-full.nupkg` (plus delta `.nupkg` packages against the previous
+   release), `DayZ.MaskEditor-win-Setup.exe`, and `DayZ.MaskEditor-win-Portable.zip`.
 
-2. Create a **GitHub Release** on `openface/devtwo.com` tagged `vX.Y.Z` and upload the
-   **entire** `releases\win-x64\` contents (the `RELEASES` index and every `.nupkg` must be
-   attached, not just the installer — Velopack reads them to compute the update).
+   > Keep `releases\win-x64\` between releases — `vpk` needs the prior `*-full.nupkg` there
+   > to compute deltas. (The pack script clears `publish\`, not `releases\`.)
 
-3. Installed clients call `UpdateService.CheckAndApplyAsync` on launch, download the delta,
-   and restart into the new version. New users download from the public page:
-   <https://devtwo.com/projects/dayz-mask-editor.html>.
+2. **FTP the entire `releases\win-x64\` contents** to
+   `devtwo.com/downloads/dayz-mask-editor/` — the `RELEASES` index and **every** `.nupkg`
+   must be uploaded (not just the installer), or Velopack can't compute the update.
 
-> The download button on that page links to
-> `https://github.com/openface/devtwo.com/releases/latest/download/DayZ.MaskEditor-win-Setup.exe`,
-> so keep the Setup asset name stable across releases (it follows `--packId`).
+3. Installed clients call `UpdateService.CheckAndApplyAsync` on launch, read `RELEASES`,
+   download the delta, and restart. New users download from the public page
+   (<https://devtwo.com/projects/dayz-mask-editor/>), whose button points at
+   `https://devtwo.com/downloads/dayz-mask-editor/DayZ.MaskEditor-win-Setup.exe`.
+
+> The Setup filename follows `--packId`, so it stays stable across releases and the
+> download link keeps working. Confirm the exact name on the first `vpk pack`.
 
 ## Notes
 

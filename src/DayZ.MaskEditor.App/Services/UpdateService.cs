@@ -4,22 +4,23 @@ using Velopack.Sources;
 namespace DayZ.MaskEditor.App.Services;
 
 /// <summary>
-/// Velopack auto-update against the GitHub Releases feed of the openface/devtwo.com
-/// repo (which also serves the project's download page via GitHub Pages). No-ops when
-/// the app is running uninstalled (e.g. a dev build), so it is safe to call on start.
+/// Velopack auto-update against a static-web feed served from the devtwo.com VPS
+/// (the Velopack release files are FTP'd there). No-ops when the app is running
+/// uninstalled (e.g. a dev build), so it is safe to call on start.
 /// </summary>
 public static class UpdateService
 {
     /// <summary>
-    /// The release feed. Points at the public GitHub repo that hosts the published
-    /// Velopack releases. Override at runtime via the DAYZMASK_UPDATE_URL env var.
+    /// The release feed: a static directory holding the Velopack <c>RELEASES</c> index
+    /// and the <c>.nupkg</c> packages. Override at runtime via the DAYZMASK_UPDATE_URL
+    /// env var.
     /// </summary>
-    public const string DefaultRepoUrl = "https://github.com/openface/devtwo.com";
+    public const string DefaultFeedUrl = "https://devtwo.com/downloads/dayz-mask-editor/";
 
-    public static string RepoUrl =>
+    public static string FeedUrl =>
         Environment.GetEnvironmentVariable("DAYZMASK_UPDATE_URL") is { Length: > 0 } u
             ? u
-            : DefaultRepoUrl;
+            : DefaultFeedUrl;
 
     /// <summary>
     /// Check for, download and apply an update, restarting if one was applied.
@@ -30,7 +31,7 @@ public static class UpdateService
     {
         try
         {
-            var mgr = new UpdateManager(new GithubSource(RepoUrl, null, prerelease: false));
+            var mgr = new UpdateManager(new SimpleWebSource(FeedUrl));
             if (!mgr.IsInstalled) return; // dev / portable run
 
             var info = await mgr.CheckForUpdatesAsync();
