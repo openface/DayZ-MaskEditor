@@ -5,7 +5,7 @@
 [![Download for Windows](https://img.shields.io/badge/download-Windows-008cc3?logo=windows)](https://github.com/openface/DayZ-MaskEditor/releases/latest/download/DayZ.MaskEditor-win-Setup.exe)
 [![Latest release](https://img.shields.io/github/v/release/openface/DayZ-MaskEditor)](https://github.com/openface/DayZ-MaskEditor/releases/latest)
 
-**[Website & screenshots →](https://openface.github.io/DayZ-MaskEditor/)**
+**[Documentation, website & screenshots →](https://openface.github.io/DayZ-MaskEditor/)**
 
 A standalone, cross-platform editor for DayZ terrain **surface masks** — no GIMP
 required. Load a terrain's `layers.cfg`, satmap, and surface mask; overlay the mask
@@ -25,11 +25,13 @@ pixel/tile logic was ported faithfully (and pinned by the same unit tests) into
   coverage %. Hover a surface to preview its texture thumbnail (bundled set, or a
   per-terrain `thumbnails/` folder next to `layers.cfg`). Click to arm (only legend
   colours are paintable); the armed surface gets an amber outline. Click it again or
-  press **Esc** to stop painting.
+  press **Esc** to stop painting. Use the **eyedropper** to arm a surface straight from
+  a pixel in the mask.
 - **Overlay editor** — mask drawn over the satmap with an opacity slider; pan
   (middle/right-drag), zoom (wheel), fit-to-view. Renders only the visible viewport,
   so 15360²-class terrains stay responsive.
-- **Hard pencil** — exact 8-bit legend colour, no anti-aliasing, adjustable size.
+- **Hard pencil** — exact 8-bit legend colour, no anti-aliasing, adjustable size, with
+  undo/redo.
 - **Validation** — Check Legend Colours (stray detection + magenta highlight), Check
   Colours Per Tile (Terrain Builder geometry, ASCII grid, red tile highlight), Check
   Image Specs. Optional tile-grid overlay.
@@ -62,7 +64,7 @@ pixel/tile logic was ported faithfully (and pinned by the same unit tests) into
 ## Build & run
 
 ```sh
-dotnet test                                   # 25 tests (parity + I/O + validation)
+dotnet test                                   # 38 tests (parity + I/O + validation + geometry)
 dotnet run --project src/DayZ.MaskEditor.App  # launch the editor
 ```
 
