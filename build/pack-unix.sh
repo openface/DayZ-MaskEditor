@@ -23,7 +23,9 @@ dotnet publish "$PROJ" -c Release -r "$RUNTIME" --self-contained true -o "$PUB"
 if [ "$PUBLISH" = "--publish" ]; then
   : "${GITHUB_TOKEN:?Set GITHUB_TOKEN (PAT with contents:write) to publish.}"
   mkdir -p "$REL"
-  vpk download github --repoUrl "$REPO" --outputDir "$REL" --token "$GITHUB_TOKEN"
+  # First release has no prior release to delta against; don't let that abort the run.
+  vpk download github --repoUrl "$REPO" --outputDir "$REL" --token "$GITHUB_TOKEN" \
+    || echo "vpk download github failed — expected on the first release; continuing with a full release."
 fi
 
 # macOS uses the bare executable name; Linux produces an AppImage.
@@ -37,7 +39,7 @@ vpk pack \
 
 if [ "$PUBLISH" = "--publish" ]; then
   vpk upload github --repoUrl "$REPO" --outputDir "$REL" --token "$GITHUB_TOKEN" \
-    --publish --releaseName "DayZ Mask Editor $VERSION" --tag "v$VERSION"
+    --publish true --releaseName "DayZ Mask Editor $VERSION" --tag "v$VERSION"
   echo "Published v$VERSION to GitHub Releases."
 else
   echo "Done. Artifacts + update feed in $REL (append --publish to release)."

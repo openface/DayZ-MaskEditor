@@ -23,6 +23,9 @@ if ($Publish) {
   if (-not $env:GITHUB_TOKEN) { throw "Set `$env:GITHUB_TOKEN (PAT with contents:write) to publish." }
   New-Item -ItemType Directory -Force -Path $rel | Out-Null
   vpk download github --repoUrl $repo --outputDir $rel --token $env:GITHUB_TOKEN
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "vpk download github failed — expected on the first release (no prior release to delta against). Continuing with a full release."
+  }
 }
 
 vpk pack `
@@ -35,7 +38,7 @@ vpk pack `
 
 if ($Publish) {
   vpk upload github --repoUrl $repo --outputDir $rel --token $env:GITHUB_TOKEN `
-    --publish --releaseName "DayZ Mask Editor $Version" --tag "v$Version"
+    --publish true --releaseName "DayZ Mask Editor $Version" --tag "v$Version"
   Write-Host "Published v$Version to GitHub Releases." -ForegroundColor Green
 } else {
   Write-Host "Done. Installer + update feed in $rel (re-run with -Publish to release)." -ForegroundColor Green
