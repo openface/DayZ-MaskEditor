@@ -14,7 +14,7 @@ palette; and validate against DayZ's rules (exact legend colours, 4/6 colours pe
 tile).
 
 This is a standalone rewrite of the
-[Gimp-DayZ-SatMask-Tools](../Gimp-DayZ-SatMask-Tools) plugin. The pure parsing and
+[Gimp-DayZ-SatMask-Tools](https://github.com/openface/Gimp-DayZ-SatMask-Tools) plugin. The pure parsing and
 pixel/tile logic was ported faithfully (and pinned by the same unit tests) into
 `DayZ.MaskEditor.Core`.
 
