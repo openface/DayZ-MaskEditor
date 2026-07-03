@@ -3,26 +3,27 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DayZ Mask Editor</title>
+<title>DayZ Mask Editor — Documentation</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
 <nav class="top">
-  <div class="wrap">
+  <div class="wrap doc-wrap">
     <a class="brand" href="./">DayZ Mask Editor</a>
     <span class="links">
+      <a href="#install">Install</a>
+      <a href="#quick-start">Quick start</a>
       <a href="https://github.com/openface/DayZ-MaskEditor">GitHub</a>
     </span>
   </div>
 </nav>
 
-<main class="wrap">
+<main class="wrap doc-wrap">
 
   <section class="hero">
     <h1>DayZ Mask Editor</h1>
-    <p class="tagline">A standalone DayZ surface-mask editor &mdash; no GIMP required.</p>
-
+    <p class="tagline">A standalone editor for DayZ terrain surface masks &mdash; no GIMP required.</p>
     <div class="actions">
       <a class="download"
          href="https://github.com/openface/DayZ-MaskEditor/releases/latest/download/DayZ.MaskEditor-win-Setup.exe">
@@ -33,56 +34,311 @@
     <p class="muted">Self-contained &mdash; no .NET install needed. Updates apply automatically on launch.</p>
   </section>
 
-  <h2>What it does</h2>
-  <p>
-    DayZ Mask Editor loads a terrain's <code>layers.cfg</code>, satellite map and surface
-    mask, overlays the mask on the satmap, and lets you paint surfaces with a hard-edged
-    pencil locked to the terrain's exact legend palette &mdash; then validates the result
-    against DayZ's rules. It's a standalone rewrite of the GIMP "DayZ SatMask Tools" plugin,
-    built to stay responsive on full-size (15360&sup2;) terrains.
-  </p>
+  <div class="doc">
 
-  <ul class="features">
-    <li>Load <code>layers.cfg</code>, satmap and mask; overlay the mask with adjustable opacity.</li>
-    <li>Surface browser with live coverage %, texture thumbnails, and an eyedropper to arm a surface from the mask.</li>
-    <li>Hard pencil locked to legend colours, with a size-and-colour brush cursor and undo/redo.</li>
-    <li>Validation: stray-colour check and per-tile colour-budget check against Terrain Builder geometry.</li>
-    <li>Auto-fix: snap strays to the legend, and consolidate over-limit tiles.</li>
-    <li>Read-only shapefile overlays (Terrain Builder exports) to guide painting.</li>
-    <li>Cross-platform (Windows, macOS, Linux) with one-click install and delta auto-updates.</li>
-  </ul>
+    <!-- Table of contents -->
+    <aside class="toc">
+      <p class="toc-title">Contents</p>
+      <ol>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#install">Install &amp; updates</a></li>
+        <li><a href="#quick-start">Quick start</a></li>
+        <li><a href="#workspace">The workspace</a></li>
+        <li><a href="#loading">Loading a terrain</a></li>
+        <li><a href="#surfaces">Surfaces &amp; palette</a></li>
+        <li><a href="#painting">Painting</a></li>
+        <li><a href="#terrain">Terrain / Mapframe</a></li>
+        <li><a href="#validation">Validation &amp; auto-fix</a></li>
+        <li><a href="#shapes">Shapefile overlays</a></li>
+        <li><a href="#saving">Saving</a></li>
+        <li><a href="#controls">Controls reference</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+      </ol>
+    </aside>
 
-  <h2>Screenshots</h2>
-  <div class="gallery">
-    <figure>
-      <img src="img/overview.png" alt="Mask overlaid on the satellite map" />
-      <figcaption>The surface mask overlaid on the satellite map</figcaption>
-    </figure>
-    <figure>
-      <img src="img/painting.png" alt="Painting surface masks" />
-      <figcaption>Painting surface masks is not tedious at all!</figcaption>
-    </figure>
-    <figure>
-      <img src="img/surface_preview.png" alt="Surface browser with texture preview" />
-      <figcaption>Surface browser with live coverage % and texture-thumbnail previews</figcaption>
-    </figure>
-    <figure>
-      <img src="img/terrain_setup.png" alt="Mapframe setup and tile grid" />
-      <figcaption>Mapframe setup, with the Terrain Builder tile grid overlaid</figcaption>
-    </figure>
-    <figure>
-      <img src="img/surface_tile_validation.png" alt="Per-tile colour-budget validation" />
-      <figcaption>Per-tile colour-budget check &mdash; over-limit tiles flagged with counts</figcaption>
-    </figure>
-    <figure>
-      <img src="img/shapes_layers.png" alt="Terrain Builder shapefile overlays" />
-      <figcaption>Read-only shapefile overlays, coloured by Terrain Builder layer</figcaption>
-    </figure>
+    <!-- Content -->
+    <div class="doc-main">
+
+      <h2 id="overview">Overview</h2>
+      <p>
+        DayZ Mask Editor loads a terrain's <code>layers.cfg</code>, satellite map and surface
+        mask, overlays the mask on the satmap, and lets you paint surfaces with a hard-edged
+        pencil locked to the terrain's exact legend palette &mdash; then validates the result
+        against DayZ's rules. It is a standalone rewrite of the GIMP &ldquo;DayZ SatMask
+        Tools&rdquo; plugin, built to stay responsive on full-size (15360&sup2;) terrains.
+      </p>
+      <p>
+        A <em>surface mask</em> is an image where each solid colour maps to a ground surface
+        (grass, gravel, rock&hellip;) defined in <code>layers.cfg</code>. DayZ requires those
+        colours to be <strong>exact</strong> and limits how many appear in each Terrain Builder
+        tile &mdash; the editor exists to make painting those masks safe and to catch rule
+        violations before you pack the terrain.
+      </p>
+
+      <h2 id="install">Install &amp; updates</h2>
+      <p>
+        <strong>Windows:</strong> download the installer and run it &mdash; one click, no .NET
+        needed (the app is self-contained). It installs per-user with Start-menu and desktop
+        shortcuts.
+      </p>
+      <div class="actions">
+        <a class="download"
+           href="https://github.com/openface/DayZ-MaskEditor/releases/latest/download/DayZ.MaskEditor-win-Setup.exe">
+          Download for Windows
+        </a>
+      </div>
+      <p>
+        <strong>Auto-updates:</strong> on launch the app checks
+        <a href="https://github.com/openface/DayZ-MaskEditor/releases">GitHub Releases</a>,
+        downloads any newer version in the background, and applies it on the next start. You
+        don't need to reinstall.
+      </p>
+      <div class="callout">
+        <p><span class="k">macOS / Linux:</span> the app is cross-platform, but pre-built
+        installers may not be published for every release. Check the
+        <a href="https://github.com/openface/DayZ-MaskEditor/releases">Releases</a> page, or
+        build from source (see the repository README).</p>
+      </div>
+
+      <h2 id="quick-start">Quick start</h2>
+      <ol class="steps">
+        <li>Open the app. Along the top bar, set the three paths &mdash; <strong>layers.cfg</strong>,
+          <strong>satmap</strong>, and <strong>mask</strong> &mdash; using the <code>&hellip;</code>
+          browse buttons.</li>
+        <li>Click <strong>Load</strong>. The mask is drawn over the satmap and the view fits to the
+          window.</li>
+        <li>Open the <strong>Surfaces</strong> tab on the left and click a surface to <em>arm</em> it
+          (it gets an amber outline).</li>
+        <li>Paint on the canvas with the left mouse button. Pan with a middle/right drag, zoom with
+          the wheel.</li>
+        <li>Run the checks under <strong>Validate &amp; fix</strong> on the right, then click
+          <strong>Save mask</strong>.</li>
+      </ol>
+      <figure class="shot">
+        <img src="img/overview.png" alt="The mask overlaid on the satellite map" />
+        <figcaption>The surface mask overlaid on the satellite map.</figcaption>
+      </figure>
+      <div class="callout tip">
+        <p><span class="k">Try it:</span> the repository ships a tiny demo terrain under
+        <code>samples/DemoTerrain/source/</code> (<code>layers.cfg</code>, <code>satmap.png</code>,
+        <code>mask.png</code>) so you can explore every feature without a real map.</p>
+      </div>
+
+      <h2 id="workspace">The workspace</h2>
+      <p>The window has four regions:</p>
+      <ul>
+        <li><strong>Setup bar</strong> (top) &mdash; the three file paths, <strong>Load</strong>, and
+          <strong>Save mask</strong>.</li>
+        <li><strong>Left panel</strong> &mdash; three tabs: <strong>Surfaces</strong> (the palette),
+          <strong>Terrain</strong> (Mapframe values), and <strong>Shapes</strong> (overlay layers).</li>
+        <li><strong>Canvas</strong> (centre) &mdash; the satmap with the mask painted over it, where
+          you edit.</li>
+        <li><strong>Tools panel</strong> (right) &mdash; brush size, overlay opacity, the
+          validate/fix buttons, and a running <strong>Log</strong>. A status line sits along the
+          bottom.</li>
+      </ul>
+
+      <h2 id="loading">Loading a terrain</h2>
+      <p>
+        In the setup bar, point each field at a file &mdash; type the path or use the
+        <code>&hellip;</code> button:
+      </p>
+      <ul>
+        <li><strong>layers.cfg</strong> &mdash; the Arma/DayZ config that defines the legend (which
+          colour is which surface). This drives the whole palette.</li>
+        <li><strong>satmap</strong> &mdash; the satellite image, shown underneath the mask for
+          reference.</li>
+        <li><strong>mask</strong> &mdash; the surface mask you'll edit.</li>
+      </ul>
+      <p>
+        Click <strong>Load</strong>. The editor parses the legend, builds the surface list, and
+        fits the image to the view. Loading, saving and validation show a progress overlay and
+        run without freezing the UI.
+      </p>
+
+      <h2 id="surfaces">Surfaces &amp; the palette</h2>
+      <p>
+        The <strong>Surfaces</strong> tab lists every legend colour as a row with its swatch, name,
+        <code>RGB</code> value and live <strong>coverage %</strong> (how much of the mask currently
+        uses it). Hover a row to preview its texture thumbnail and material path.
+      </p>
+      <figure class="shot">
+        <img src="img/surface_preview.png" alt="Surface browser with coverage and thumbnails" />
+        <figcaption>The surface browser: swatch, name, RGB, live coverage %, and a hover preview.</figcaption>
+      </figure>
+      <p>
+        <strong>Arming a surface:</strong> click a row to arm it for painting &mdash; it gets an
+        amber outline and becomes the colour your pencil lays down. Click it again, or press
+        <kbd>Esc</kbd>, to stop painting. Only legend colours can be armed, so you can never paint an
+        invalid colour.
+      </p>
+      <p>
+        <strong>Eyedropper:</strong> toggle the eyedropper button at the top of the tab, then click
+        anywhere on the mask to arm whatever surface is painted there &mdash; handy for matching an
+        existing area.
+      </p>
+
+      <h2 id="painting">Painting</h2>
+      <p>
+        With a surface armed, paint on the canvas by dragging with the <strong>left mouse
+        button</strong>. The pencil is <em>hard-edged</em> and writes the exact 8-bit legend colour
+        &mdash; no anti-aliasing, no blended edges &mdash; which is exactly what DayZ requires.
+      </p>
+      <figure class="shot">
+        <img src="img/painting.png" alt="Painting surface masks" />
+        <figcaption>Painting with a size-and-colour brush cursor over the overlaid mask.</figcaption>
+      </figure>
+      <ul>
+        <li><strong>Brush size</strong> &mdash; the <em>Size</em> slider on the right panel (1&ndash;512 px).
+          The round brush cursor previews the size and armed colour.</li>
+        <li><strong>Overlay opacity</strong> &mdash; the <em>Overlay</em> slider fades the mask against
+          the satmap so you can line features up; it does not change the saved mask.</li>
+        <li><strong>Pan</strong> &mdash; drag with the middle or right mouse button.</li>
+        <li><strong>Zoom</strong> &mdash; the mouse wheel, centred on the cursor.</li>
+        <li><strong>Undo / redo</strong> &mdash; <kbd>Ctrl</kbd>+<kbd>Z</kbd> and
+          <kbd>Ctrl</kbd>+<kbd>Y</kbd> (or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>), up to the
+          last 30 strokes.</li>
+      </ul>
+
+      <h2 id="terrain">Terrain / Mapframe setup</h2>
+      <p>
+        The <strong>Terrain</strong> tab holds your Mapframe values &mdash; copy them from
+        <em>Terrain Builder &#9656; Mapframe properties</em>. They let the editor map real-world
+        coordinates to mask pixels (used by both the tile checks and the shapefile overlays):
+      </p>
+      <ul>
+        <li><strong>Easting / Northing</strong> &mdash; the terrain's world origin, in metres.</li>
+        <li><strong>Grid size (cells)</strong> and <strong>Cell size (m)</strong> &mdash; together
+          these give the terrain's size in metres and its resolution, both shown read-only below.</li>
+        <li><strong>Source image (px)</strong> &mdash; the satmap source resolution the mask was made
+          for. The editor checks your loaded mask matches this.</li>
+      </ul>
+      <p>The tile parameters drive the per-tile colour check:</p>
+      <ul>
+        <li><strong>Tile size (px)</strong>, <strong>Actual overlap (px)</strong>,
+          <strong>Tiles in row</strong> &mdash; the Terrain Builder tiling geometry.</li>
+        <li><strong>Max colours</strong> &mdash; the colour budget per tile (DayZ typically allows
+          4&ndash;6).</li>
+      </ul>
+      <figure class="shot">
+        <img src="img/terrain_setup.png" alt="Mapframe setup with the tile grid overlaid" />
+        <figcaption>Mapframe setup, with the Terrain Builder tile grid overlaid on the canvas.</figcaption>
+      </figure>
+      <div class="callout">
+        <p>Enter these values before running <strong>Check colours per tile</strong> or adding
+        shapefiles &mdash; both need the Mapframe to place things correctly. The editor refuses to
+        guess: if the setup is incomplete or inconsistent it tells you what's wrong instead of
+        drawing something misleading.</p>
+      </div>
+
+      <h2 id="validation">Validation &amp; auto-fix</h2>
+      <p>The right panel groups the checks and their matching fixes:</p>
+
+      <h3>Check legend colours</h3>
+      <p>
+        Scans the mask for any pixel whose colour isn't in the legend (&ldquo;strays&rdquo; from
+        resampling or old edits) and highlights them in magenta. If strays are found,
+        <strong>Fix: snap strays &rarr; legend</strong> becomes available &mdash; it replaces every
+        non-legend pixel with the nearest legend colour, then re-runs the check to confirm.
+      </p>
+
+      <h3>Check colours per tile</h3>
+      <p>
+        Using the Mapframe/tile values from the Terrain tab, it counts distinct colours in each
+        Terrain Builder tile and flags any tile over the <em>Max colours</em> budget &mdash; drawn
+        as a red tile with a <em>colours/limit</em> badge, plus an ASCII grid in the log. Turn on
+        <strong>Show tile grid</strong> to see the tile boundaries while you work. When over-limit
+        tiles exist, <strong>Fix: consolidate over-limit tiles</strong> brings each one down to the
+        budget by replacing its rarest colours (fragment-aware, matching the original plugin), then
+        re-checks.
+      </p>
+      <figure class="shot">
+        <img src="img/surface_tile_validation.png" alt="Per-tile colour-budget validation" />
+        <figcaption>Per-tile colour-budget check &mdash; over-limit tiles are flagged with counts.</figcaption>
+      </figure>
+
+      <h3>Check image specs</h3>
+      <p>
+        Sanity-checks the loaded images (dimensions, format) against what the terrain expects, so a
+        wrong-sized or wrong-type file is caught early.
+      </p>
+      <div class="callout tip">
+        <p>Fixes are automatic but never silent &mdash; each one re-runs its check afterwards and
+        logs what it changed, so you can confirm the mask is clean before saving.</p>
+      </div>
+
+      <h2 id="shapes">Shapefile overlays</h2>
+      <p>
+        The <strong>Shapes</strong> tab loads Terrain Builder <code>.shp</code> exports (roads,
+        objects, areas) as <strong>read-only reference layers</strong> drawn over the satmap, so you
+        can see where in-world features sit while you paint. They never change the mask &mdash; they
+        are a guide only.
+      </p>
+      <figure class="shot">
+        <img src="img/shapes_layers.png" alt="Terrain Builder shapefile overlays" />
+        <figcaption>Read-only shapefile overlays, coloured by Terrain Builder layer.</figcaption>
+      </figure>
+      <ul>
+        <li><strong>Add shapefile(s)&hellip;</strong> to load one or more layers.</li>
+        <li>Per layer: click the swatch to cycle its colour, toggle visibility, adjust opacity, or
+          remove it.</li>
+        <li><strong>Colour by TB layer</strong> splits a shapefile by its Terrain Builder
+          <code>__LAYER</code> field, so you can colour and toggle each sub-layer independently.
+          (These are Terrain Builder layers, not DayZ surfaces.)</li>
+      </ul>
+      <div class="callout warn">
+        <p>Overlays are positioned from the <a href="#terrain">Mapframe values</a>. If the setup is
+        incomplete, the mask doesn't match the declared source size, the tile values don't tile that
+        size, or a shapefile falls outside the terrain extent, the layer shows a warning and won't
+        be drawn &mdash; fix the Mapframe values rather than trusting a mis-placed overlay.</p>
+      </div>
+
+      <h2 id="saving">Saving</h2>
+      <p>
+        Click <strong>Save mask</strong> to write the mask back to a lossless PNG. The output is
+        <strong>byte-exact</strong> &mdash; only pixels you painted change; nothing is recompressed
+        or dithered &mdash; so it's safe to round-trip through the editor repeatedly.
+      </p>
+
+      <h2 id="controls">Controls reference</h2>
+      <table class="controls">
+        <thead><tr><th>Input</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>Left drag</td><td>Paint with the armed surface</td></tr>
+          <tr><td>Left click (eyedropper on)</td><td>Sample the surface under the cursor and arm it</td></tr>
+          <tr><td>Middle / right drag</td><td>Pan the view</td></tr>
+          <tr><td>Mouse wheel</td><td>Zoom in / out (centred on the cursor)</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Stop painting (disarm the current surface)</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo the last paint stroke (up to 30)</td></tr>
+          <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Redo</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="troubleshooting">Troubleshooting</h2>
+      <ul>
+        <li><strong>I can't paint / no colour appears.</strong> Arm a surface first (click a row on
+          the <strong>Surfaces</strong> tab). Only legend colours are paintable.</li>
+        <li><strong>&ldquo;Check colours per tile&rdquo; does nothing or errors.</strong> Fill in the
+          <strong>Terrain</strong> tab (tile size, tiles in row, max colours, source px) &mdash; the
+          check needs the tiling geometry.</li>
+        <li><strong>A shapefile won't show.</strong> It's likely outside the terrain extent or the
+          Mapframe values are off &mdash; check the layer's warning message and the Terrain tab.</li>
+        <li><strong>Strays keep appearing.</strong> They usually come from an earlier non-hard-edged
+          edit or a resample. Run <strong>Check legend colours</strong> then
+          <strong>Fix: snap strays &rarr; legend</strong>.</li>
+        <li><strong>macOS won't open the app.</strong> Unsigned builds need a right-click &rarr;
+          <em>Open</em> the first time to bypass Gatekeeper.</li>
+      </ul>
+      <p class="muted">
+        Found a bug or have a request? Open an issue on
+        <a href="https://github.com/openface/DayZ-MaskEditor/issues">GitHub</a>.
+      </p>
+
+    </div>
   </div>
-
 </main>
 
-<!-- Click-to-enlarge lightbox (populated from the gallery by the script below). -->
+<!-- Click-to-enlarge lightbox for screenshots. -->
 <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="Screenshot">
   <span class="close" aria-label="Close" title="Close">&times;</span>
   <figure>
@@ -92,11 +348,11 @@
 </div>
 
 <footer class="site">
-  <div class="wrap"><a href="https://github.com/openface/DayZ-MaskEditor">DayZ Mask Editor on GitHub</a></div>
+  <div class="wrap doc-wrap"><a href="https://github.com/openface/DayZ-MaskEditor">DayZ Mask Editor on GitHub</a></div>
 </footer>
 
 <script type="text/javascript">
-// Lightbox: click a gallery image to view it full-size; click anywhere or Esc to close.
+// Lightbox: click a screenshot to view it full-size; click anywhere or Esc to close.
 (function() {
   var lb = document.getElementById('lightbox');
   var lbImg = document.getElementById('lightbox-img');
@@ -106,7 +362,7 @@
     lb.setAttribute('aria-hidden', 'true');
     lbImg.src = '';
   }
-  var imgs = document.querySelectorAll('.gallery img');
+  var imgs = document.querySelectorAll('figure.shot img');
   for (var i = 0; i < imgs.length; i++) {
     imgs[i].addEventListener('click', function() {
       var fig = this.closest('figure');
@@ -122,6 +378,29 @@
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' || e.keyCode === 27) close();
   });
+})();
+
+// Scroll-spy: highlight the current section in the table of contents.
+(function() {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+  if (!links.length || !('IntersectionObserver' in window)) return;
+  var map = {};
+  var sections = links.map(function(a) {
+    var id = a.getAttribute('href').slice(1);
+    map[id] = a;
+    return document.getElementById(id);
+  }).filter(Boolean);
+
+  var current = null;
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(en) {
+      if (en.isIntersecting) current = en.target.id;
+    });
+    links.forEach(function(a) { a.classList.remove('active'); });
+    if (current && map[current]) map[current].classList.add('active');
+  }, { rootMargin: '-10% 0px -80% 0px', threshold: 0 });
+
+  sections.forEach(function(s) { obs.observe(s); });
 })();
 </script>
 
