@@ -77,16 +77,19 @@
       </p>
       <p>
         A <em>surface mask</em> is an image where each solid colour maps to a ground surface
-        (grass, gravel, rock&hellip;) defined in <code>layers.cfg</code>. DayZ requires those
-        colours to be <strong>exact</strong> and limits how many appear in each Terrain Builder
-        tile &mdash; the editor exists to make painting those masks safe and to catch rule
-        violations before you pack the terrain.
+        (grass, gravel, rock&hellip;) defined in <code>layers.cfg</code> (BI docs:
+        <a href="https://community.bistudio.com/wiki/Layered_Terrain_Surface_Representation">Layered
+        Terrain Surface Representation</a>). DayZ requires those colours to be
+        <strong>exact</strong> and limits how many appear in each Terrain Builder tile &mdash; the
+        editor exists to make painting those masks safe and to catch rule violations before you
+        pack the terrain.
       </p>
 
       <h2 id="workflow">Where it fits in your Terrain Builder workflow</h2>
       <p>
-        DayZ ground surfaces come from three inputs Terrain Builder ties together in the
-        <strong>Mapframe</strong>: the <strong>satellite source</strong> (satmap), the
+        DayZ ground surfaces come from three inputs
+        <a href="https://community.bistudio.com/wiki/Terrain_Builder">Terrain Builder</a> ties
+        together in the <strong>Mapframe</strong>: the <strong>satellite source</strong> (satmap), the
         <strong>surface mask source</strong> (one solid legend colour per pixel), and
         <code>layers.cfg</code> (which maps each colour to a material and its textures). When you
         run <strong>Generate Layers</strong>, Terrain Builder cuts the satmap and mask into
@@ -95,8 +98,9 @@
         limited number of distinct surfaces (DayZ's 4/6-colours-per-tile rule), and every pixel
         must be an <strong>exact</strong> legend colour. A stray colour or an over-budget tile
         makes <strong>Generate Layers</strong> fail or bake the wrong material &mdash; usually
-        found only after a slow Generate Layers &rarr; Export WRP &rarr; pack (Addon Builder)
-        &rarr; in-game test round trip.
+        found only after a slow Generate Layers &rarr; Export WRP &rarr; pack
+        (<a href="https://community.bistudio.com/wiki/Addon_Builder">Addon Builder</a>) &rarr;
+        in-game test round trip.
       </p>
       <p>
         This editor is the <strong>paint-and-validate step before Generate Layers</strong>, so the
@@ -116,9 +120,9 @@
         <li><em>(Optional)</em> Overlay Terrain Builder <code>.shp</code> exports (roads, objects,
           areas) as a <a href="#shapes">visual reference</a> so painted surfaces line up with
           in-world features. The overlay never changes surface assignments.</li>
-        <li><a href="#saving">Save</a> the mask as a byte-exact PNG and select it as the surface
-          mask in the <strong>Layers Generator</strong> as usual, ready for the next
-          <strong>Generate Layers</strong>.</li>
+        <li><a href="#saving">Save</a> the mask as a byte-exact PNG and bring it back into Terrain
+          Builder the usual way &mdash; <strong>Tools &#9656; Import Satellite + Mask</strong>,
+          then re-run <strong>Generate Layers</strong>.</li>
       </ol>
       <div class="callout warn">
         <p><span class="k">Back up your surface mask first.</span> Saving overwrites the mask file
@@ -172,7 +176,12 @@
       <div class="callout tip">
         <p><span class="k">Try it:</span> the repository ships a tiny demo terrain under
         <code>samples/DemoTerrain/source/</code> (<code>layers.cfg</code>, <code>satmap.png</code>,
-        <code>mask.png</code>) so you can explore every feature without a real map.</p>
+        <code>mask.png</code>) so you can explore every feature without a real map. For a complete
+        real terrain, BI's official
+        <a href="https://community.bistudio.com/wiki/DayZ:Terrain_sample">DayZ terrain sample</a>
+        (Utes) works too &mdash; its satmap and mask are TIFs under
+        <code>source\gis_input\</code>, which the editor loads fine; on save you'll be prompted
+        for a <code>.png</code> target.</p>
       </div>
 
       <h2 id="workspace">The workspace</h2>
@@ -199,12 +208,19 @@
           colour is which surface). This drives the whole palette.</li>
         <li><strong>satmap</strong> &mdash; the satellite image, shown underneath the mask for
           reference.</li>
-        <li><strong>mask</strong> &mdash; the surface mask you'll edit.</li>
+        <li><strong>mask</strong> &mdash; the surface mask you'll edit. (New to authoring these?
+          See BI's <a href="https://community.bistudio.com/wiki/Making_Satellite_Texture_and_Mask">Making
+          Satellite Texture and Mask</a>.)</li>
       </ul>
       <p>
         These are the same files your Terrain Builder project already uses &mdash; typically under
         your project's source folder on the P: drive, e.g.
         <code>P:\mymap\source\layers.cfg</code>. There's nothing to export or convert.
+      </p>
+      <p>
+        <strong>Image formats:</strong> the satmap and mask load from <strong>PNG, TIFF, TGA or
+        BMP</strong>. The mask always <a href="#saving">saves as PNG</a>, ready for Terrain
+        Builder's <strong>Import Satellite + Mask</strong>, regardless of what you loaded.
       </p>
       <p>
         Click <strong>Load</strong>. The editor parses the legend, builds the surface list, and
@@ -216,7 +232,9 @@
       <p>
         The <strong>Surfaces</strong> tab lists every legend colour as a row with its swatch, name,
         <code>RGB</code> value and live <strong>coverage %</strong> (how much of the mask currently
-        uses it). Hover a row to preview its texture thumbnail and material path.
+        uses it). Hover a row to preview its texture thumbnail and material path. (For how the
+        materials themselves are defined, see BI's
+        <a href="https://community.bistudio.com/wiki/DayZ:Surfaces">DayZ: Surfaces</a>.)
       </p>
       <figure class="shot">
         <img src="img/surface_preview.png" alt="Surface browser with coverage and thumbnails" />
@@ -360,7 +378,9 @@
       <p>
         Click <strong>Save mask</strong> to write the mask back to a lossless PNG. The output is
         <strong>byte-exact</strong> &mdash; only pixels you painted change; nothing is recompressed
-        or dithered &mdash; so it's safe to round-trip through the editor repeatedly.
+        or dithered &mdash; so it's safe to round-trip through the editor repeatedly. If the mask
+        you loaded wasn't a PNG (a TIF, say), the editor never overwrites the original &mdash; it
+        prompts for a <code>.png</code> target instead.
       </p>
 
       <h2 id="controls">Controls reference</h2>
@@ -396,7 +416,10 @@
           <em>Open</em> the first time to bypass Gatekeeper.</li>
       </ul>
       <p class="muted">
-        Found a bug or have a request? Open an issue on
+        For terrain problems beyond the mask itself, BI's
+        <a href="https://community.bistudio.com/wiki/Arma_3:_Common_Terrain_Creation_Problems">Common
+        Terrain Creation Problems</a> page is a good checklist. Found a bug in the editor or have a
+        request? Open an issue on
         <a href="https://github.com/openface/DayZ-MaskEditor/issues">GitHub</a>.
       </p>
 

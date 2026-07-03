@@ -555,6 +555,17 @@ public sealed partial class MainViewModel : ObservableObject
         var target = Document.MaskPath ?? MaskPath;
         if (string.IsNullOrWhiteSpace(target) && Dialogs != null)
             target = await Dialogs.SaveFileAsync("Save mask as", "mask.png", "png");
+        // The editor always writes PNG data; never overwrite a non-PNG source (e.g. a
+        // TIF mask) with PNG bytes under the old extension — pick a .png target instead.
+        if (!string.IsNullOrWhiteSpace(target) &&
+            !target.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            Log($"{Path.GetFileName(target)} is not a PNG; choosing a .png target.");
+            var suggested = Path.ChangeExtension(Path.GetFileName(target), ".png");
+            target = Dialogs != null
+                ? await Dialogs.SaveFileAsync("Save mask as PNG", suggested, "png")
+                : Path.ChangeExtension(target, ".png");
+        }
         if (string.IsNullOrWhiteSpace(target)) return;
 
         BusyText = "Saving mask…";
