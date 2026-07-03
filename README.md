@@ -1,5 +1,6 @@
 # DayZ Mask Editor
 
+[![tests](https://github.com/openface/DayZ-MaskEditor/actions/workflows/tests.yml/badge.svg)](https://github.com/openface/DayZ-MaskEditor/actions/workflows/tests.yml)
 [![Website](https://img.shields.io/badge/website-openface.github.io-00a8e8)](https://openface.github.io/DayZ-MaskEditor/)
 [![Download for Windows](https://img.shields.io/badge/download-Windows-008cc3?logo=windows)](https://github.com/openface/DayZ-MaskEditor/releases/latest/download/DayZ.MaskEditor-win-Setup.exe)
 [![Latest release](https://img.shields.io/github/v/release/openface/DayZ-MaskEditor)](https://github.com/openface/DayZ-MaskEditor/releases/latest)
