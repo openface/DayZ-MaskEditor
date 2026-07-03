@@ -1,5 +1,11 @@
 # DayZ Mask Editor
 
+[![Website](https://img.shields.io/badge/website-openface.github.io-00a8e8)](https://openface.github.io/DayZ-MaskEditor/)
+[![Download for Windows](https://img.shields.io/badge/download-Windows-008cc3?logo=windows)](https://github.com/openface/DayZ-MaskEditor/releases/latest/download/DayZ.MaskEditor-win-Setup.exe)
+[![Latest release](https://img.shields.io/github/v/release/openface/DayZ-MaskEditor)](https://github.com/openface/DayZ-MaskEditor/releases/latest)
+
+**[Website & screenshots →](https://openface.github.io/DayZ-MaskEditor/)**
+
 A standalone, cross-platform editor for DayZ terrain **surface masks** — no GIMP
 required. Load a terrain's `layers.cfg`, satmap, and surface mask; overlay the mask
 on the satmap; paint with a hard-edged pencil constrained to the fixed legend
