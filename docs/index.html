@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DayZ Mask Editor</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<nav class="top">
+  <div class="wrap">
+    <a class="brand" href="./">DayZ Mask Editor</a>
+    <span class="links">
+      <a href="https://github.com/openface/DayZ-MaskEditor">GitHub</a>
+    </span>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section class="hero">
+    <h1>DayZ Mask Editor</h1>
+    <p class="tagline">A standalone DayZ surface-mask editor &mdash; no GIMP required.</p>
+
+    <div class="actions">
+      <a class="download"
+         href="https://github.com/openface/DayZ-MaskEditor/releases/latest/download/DayZ.MaskEditor-win-Setup.exe">
+        Download for Windows
+        <span class="sub">one-click installer &middot; auto-updates</span>
+      </a>
+    </div>
+    <p class="muted">Self-contained &mdash; no .NET install needed. Updates apply automatically on launch.</p>
+  </section>
+
+  <h2>What it does</h2>
+  <p>
+    DayZ Mask Editor loads a terrain's <code>layers.cfg</code>, satellite map and surface
+    mask, overlays the mask on the satmap, and lets you paint surfaces with a hard-edged
+    pencil locked to the terrain's exact legend palette &mdash; then validates the result
+    against DayZ's rules. It's a standalone rewrite of the GIMP "DayZ SatMask Tools" plugin,
+    built to stay responsive on full-size (15360&sup2;) terrains.
+  </p>
+
+  <ul class="features">
+    <li>Load <code>layers.cfg</code>, satmap and mask; overlay the mask with adjustable opacity.</li>
+    <li>Surface browser with live coverage %, texture thumbnails, and an eyedropper to arm a surface from the mask.</li>
+    <li>Hard pencil locked to legend colours, with a size-and-colour brush cursor and undo/redo.</li>
+    <li>Validation: stray-colour check and per-tile colour-budget check against Terrain Builder geometry.</li>
+    <li>Auto-fix: snap strays to the legend, and consolidate over-limit tiles.</li>
+    <li>Read-only shapefile overlays (Terrain Builder exports) to guide painting.</li>
+    <li>Cross-platform (Windows, macOS, Linux) with one-click install and delta auto-updates.</li>
+  </ul>
+
+  <h2>Screenshots</h2>
+  <div class="gallery">
+    <figure>
+      <img src="img/overview.png" alt="Mask overlaid on the satellite map" />
+      <figcaption>The surface mask overlaid on the satellite map</figcaption>
+    </figure>
+    <figure>
+      <img src="img/painting.png" alt="Painting surface masks" />
+      <figcaption>Painting surface masks is not tedious at all!</figcaption>
+    </figure>
+    <figure>
+      <img src="img/surface_preview.png" alt="Surface browser with texture preview" />
+      <figcaption>Surface browser with live coverage % and texture-thumbnail previews</figcaption>
+    </figure>
+    <figure>
+      <img src="img/terrain_setup.png" alt="Mapframe setup and tile grid" />
+      <figcaption>Mapframe setup, with the Terrain Builder tile grid overlaid</figcaption>
+    </figure>
+    <figure>
+      <img src="img/surface_tile_validation.png" alt="Per-tile colour-budget validation" />
+      <figcaption>Per-tile colour-budget check &mdash; over-limit tiles flagged with counts</figcaption>
+    </figure>
+    <figure>
+      <img src="img/shapes_layers.png" alt="Terrain Builder shapefile overlays" />
+      <figcaption>Read-only shapefile overlays, coloured by Terrain Builder layer</figcaption>
+    </figure>
+  </div>
+
+</main>
+
+<!-- Click-to-enlarge lightbox (populated from the gallery by the script below). -->
+<div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="Screenshot">
+  <span class="close" aria-label="Close" title="Close">&times;</span>
+  <figure>
+    <img id="lightbox-img" src="" alt="" />
+    <figcaption id="lightbox-cap"></figcaption>
+  </figure>
+</div>
+
+<footer class="site">
+  <div class="wrap"><a href="https://github.com/openface/DayZ-MaskEditor">DayZ Mask Editor on GitHub</a></div>
+</footer>
+
+<script type="text/javascript">
+// Lightbox: click a gallery image to view it full-size; click anywhere or Esc to close.
+(function() {
+  var lb = document.getElementById('lightbox');
+  var lbImg = document.getElementById('lightbox-img');
+  var lbCap = document.getElementById('lightbox-cap');
+  function close() {
+    lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true');
+    lbImg.src = '';
+  }
+  var imgs = document.querySelectorAll('.gallery img');
+  for (var i = 0; i < imgs.length; i++) {
+    imgs[i].addEventListener('click', function() {
+      var fig = this.closest('figure');
+      var cap = fig ? fig.querySelector('figcaption') : null;
+      lbImg.src = this.src;
+      lbImg.alt = this.alt || '';
+      lbCap.textContent = cap ? cap.textContent : '';
+      lb.classList.add('open');
+      lb.setAttribute('aria-hidden', 'false');
+    });
+  }
+  lb.addEventListener('click', close);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) close();
+  });
+})();
+</script>
+
+</body>
+</html>
