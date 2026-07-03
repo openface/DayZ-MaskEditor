@@ -129,7 +129,7 @@
             <ScrollViewer>
               <StackPanel Margin="4" Spacing="6">
                 <TextBlock Text="Mapframe setup" FontWeight="Bold"/>
-                <TextBlock Text="Copy these from Terrain Builder ▸ Mapframe properties."
+                <TextBlock Text="Copy these from Terrain Builder ▸ Mapframe Properties (Easting/Northing: Location tab; the rest: Samplers tab)."
                            FontSize="11" Opacity="0.6" TextWrapping="Wrap"/>
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" RowSpacing="4"
                       RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">

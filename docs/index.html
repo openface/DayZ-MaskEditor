@@ -95,16 +95,18 @@
         limited number of distinct surfaces (DayZ's 4/6-colours-per-tile rule), and every pixel
         must be an <strong>exact</strong> legend colour. A stray colour or an over-budget tile
         makes <strong>Generate Layers</strong> fail or bake the wrong material &mdash; usually
-        found only after a slow Generate Layers &rarr; binarize &rarr; test-in-game round trip.
+        found only after a slow Generate Layers &rarr; Export WRP &rarr; pack (Addon Builder)
+        &rarr; in-game test round trip.
       </p>
       <p>
         This editor is the <strong>paint-and-validate step before Generate Layers</strong>, so the
         mask you feed Terrain Builder is already valid:
       </p>
       <ol class="steps">
-        <li>In Terrain Builder, open <strong>Mapframe Properties &#9656; Samplers</strong> and note
-          your values &mdash; Easting/Northing, grid &amp; cell size, the satellite/surface
-          <strong>source image size</strong>, and the <strong>tile size</strong> / overlap.</li>
+        <li>In Terrain Builder, open <strong>Mapframe Properties</strong> and note your values
+          &mdash; Easting/Northing from the <strong>Location</strong> tab; grid &amp; cell size,
+          the satellite/surface <strong>source image size</strong>, and the <strong>tile
+          size</strong> / overlap from the <strong>Samplers</strong> tab.</li>
         <li>Open your terrain's <code>layers.cfg</code>, satmap and current surface mask here, and
           paint with a pencil that can only lay down exact legend colours.</li>
         <li>Enter those Mapframe values on the <a href="#terrain">Terrain</a> tab so
@@ -114,9 +116,9 @@
         <li><em>(Optional)</em> Overlay Terrain Builder <code>.shp</code> exports (roads, objects,
           areas) as a <a href="#shapes">visual reference</a> so painted surfaces line up with
           in-world features. The overlay never changes surface assignments.</li>
-        <li><a href="#saving">Save</a> the mask as a byte-exact PNG and point the Mapframe's
-          <strong>surface mask source</strong> at it, ready for the next <strong>Generate
-          Layers</strong>.</li>
+        <li><a href="#saving">Save</a> the mask as a byte-exact PNG and select it as the surface
+          mask in the <strong>Layers Generator</strong> as usual, ready for the next
+          <strong>Generate Layers</strong>.</li>
       </ol>
       <div class="callout warn">
         <p><span class="k">Back up your surface mask first.</span> Saving overwrites the mask file
@@ -125,8 +127,8 @@
       </div>
       <div class="callout">
         <p><span class="k">In short:</span> the editor keeps your surface mask valid to DayZ's
-        rules so the expensive Generate Layers &rarr; binarize &rarr; in-game test loop doesn't
-        fail on avoidable colour or tile-limit errors.</p>
+        rules so the expensive Generate Layers &rarr; Export WRP &rarr; pack &rarr; in-game test
+        loop doesn't fail on avoidable colour or tile-limit errors.</p>
       </div>
 
       <h2 id="install">Install &amp; updates</h2>
@@ -200,6 +202,11 @@
         <li><strong>mask</strong> &mdash; the surface mask you'll edit.</li>
       </ul>
       <p>
+        These are the same files your Terrain Builder project already uses &mdash; typically under
+        your project's source folder on the P: drive, e.g.
+        <code>P:\mymap\source\layers.cfg</code>. There's nothing to export or convert.
+      </p>
+      <p>
         Click <strong>Load</strong>. The editor parses the legend, builds the surface list, and
         fits the image to the view. Loading, saving and validation show a progress overlay and
         run without freezing the UI.
@@ -252,22 +259,29 @@
       <h2 id="terrain">Terrain / Mapframe setup</h2>
       <p>
         The <strong>Terrain</strong> tab holds your Mapframe values &mdash; copy them from
-        <em>Terrain Builder &#9656; Mapframe properties</em>. They let the editor map real-world
-        coordinates to mask pixels (used by both the tile checks and the shapefile overlays):
+        <em>Terrain Builder &#9656; Mapframe Properties</em>: Easting/Northing from the
+        <strong>Location</strong> tab, everything else from the <strong>Samplers</strong> tab.
+        They let the editor map real-world coordinates to mask pixels (used by both the tile
+        checks and the shapefile overlays):
       </p>
       <ul>
-        <li><strong>Easting / Northing</strong> &mdash; the terrain's world origin, in metres.</li>
-        <li><strong>Grid size (cells)</strong> and <strong>Cell size (m)</strong> &mdash; together
-          these give the terrain's size in metres and its resolution, both shown read-only below.</li>
-        <li><strong>Source image (px)</strong> &mdash; the satmap source resolution the mask was made
-          for. The editor checks your loaded mask matches this.</li>
+        <li><strong>Easting / Northing</strong> &mdash; the terrain's world origin, in metres
+          (Location tab).</li>
+        <li><strong>Grid size (cells)</strong> and <strong>Cell size (m)</strong> &mdash; the
+          terrain sampler values; together these give the terrain's size in metres and its
+          resolution, both shown read-only below.</li>
+        <li><strong>Source image (px)</strong> &mdash; TB's <em>Satellite/Surface (mask) source
+          images &#9656; Size</em>: the source resolution the mask was made for. The editor checks
+          your loaded mask matches this.</li>
       </ul>
       <p>The tile parameters drive the per-tile colour check:</p>
       <ul>
         <li><strong>Tile size (px)</strong>, <strong>Actual overlap (px)</strong>,
-          <strong>Tiles in row</strong> &mdash; the Terrain Builder tiling geometry.</li>
-        <li><strong>Max colours</strong> &mdash; the colour budget per tile (DayZ typically allows
-          4&ndash;6).</li>
+          <strong>Tiles in row</strong> &mdash; TB's <em>Satellite/Surface (mask) tiles</em>
+          values (<em>Size of tile</em>, <em>Actual overlap</em>, <em>Tiles in row count</em>).</li>
+        <li><strong>Max colours</strong> &mdash; the colour budget per tile. DayZ's hard limit is
+          <strong>6</strong> distinct surfaces per tile; many terrain devs budget <strong>4</strong>
+          for headroom. Enter whichever your terrain targets.</li>
       </ul>
       <figure class="shot">
         <img src="img/terrain_setup.png" alt="Mapframe setup with the tile grid overlaid" />
@@ -375,6 +389,9 @@
         <li><strong>Strays keep appearing.</strong> They usually come from an earlier non-hard-edged
           edit or a resample. Run <strong>Check legend colours</strong> then
           <strong>Fix: snap strays &rarr; legend</strong>.</li>
+        <li><strong>Windows SmartScreen blocks the installer.</strong> The installer is unsigned,
+          so the first run may show &ldquo;Windows protected your PC&rdquo; &mdash; click
+          <em>More info</em> &rarr; <em>Run anyway</em>.</li>
         <li><strong>macOS won't open the app.</strong> Unsigned builds need a right-click &rarr;
           <em>Open</em> the first time to bypass Gatekeeper.</li>
       </ul>
