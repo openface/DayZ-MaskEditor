@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Package DayZ-MaskEditor for macOS or Linux with Velopack.
 # Prereq: dotnet tool install -g vpk
+# Release notes come from the matching CHANGELOG.md section.
 # Usage: ./pack-unix.sh <version> <runtime> [--publish]
 #   runtime: osx-arm64 | osx-x64 | linux-x64
 #   --publish pushes to GitHub Releases (needs $GITHUB_TOKEN, PAT with contents:write).
@@ -16,6 +17,29 @@ PUB="$ROOT/publish/$RUNTIME"
 REL="$ROOT/releases/$RUNTIME"
 REPO="https://github.com/openface/DayZ-MaskEditor"
 
+# --- Release notes: extract the "## [$VERSION]" section from CHANGELOG.md -------------
+# Prints the section body (between the version heading and the next "## [" heading).
+NOTES=""
+if [ -f "$ROOT/CHANGELOG.md" ]; then
+  NOTES="$(awk -v ver="$VERSION" '
+    index($0, "## [" ver "]") == 1 {flag=1; next}
+    flag && /^## \[/ {flag=0}
+    flag {print}
+  ' "$ROOT/CHANGELOG.md")"
+fi
+
+# Fail fast (before the long build) if publishing a version with no changelog entry.
+NOTES_FILE=""
+if [ -n "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
+  NOTES_FILE="${TMPDIR:-/tmp}/maskeditor-notes-$VERSION.md"
+  printf '%s\n' "$NOTES" > "$NOTES_FILE"
+elif [ "$PUBLISH" = "--publish" ]; then
+  echo "ERROR: No CHANGELOG.md section for [$VERSION]. Rename '## [Unreleased]' to '## [$VERSION] - <date>' before publishing." >&2
+  exit 1
+else
+  echo "No CHANGELOG.md section for [$VERSION]; packing without release notes."
+fi
+
 rm -rf "$PUB"
 dotnet publish "$PROJ" -c Release -r "$RUNTIME" --self-contained true -o "$PUB"
 
@@ -29,13 +53,10 @@ if [ "$PUBLISH" = "--publish" ]; then
 fi
 
 # macOS uses the bare executable name; Linux produces an AppImage.
-vpk pack \
-  --packId DayZ.MaskEditor \
-  --packVersion "$VERSION" \
-  --packDir "$PUB" \
-  --mainExe DayZ.MaskEditor \
-  --packTitle "DayZ Mask Editor" \
-  --outputDir "$REL"
+PACK_ARGS=(--packId DayZ.MaskEditor --packVersion "$VERSION" --packDir "$PUB" \
+  --mainExe DayZ.MaskEditor --packTitle "DayZ Mask Editor" --outputDir "$REL")
+[ -n "$NOTES_FILE" ] && PACK_ARGS+=(--releaseNotes "$NOTES_FILE")
+vpk pack "${PACK_ARGS[@]}"
 
 if [ "$PUBLISH" = "--publish" ]; then
   vpk upload github --repoUrl "$REPO" --outputDir "$REL" --token "$GITHUB_TOKEN" \

@@ -42,7 +42,23 @@ Velopack's `GithubSource` (`UpdateService.DefaultRepoUrl`; override per-machine 
 Set a `GITHUB_TOKEN` env var first — a PAT with `contents:write` on
 `openface/DayZ-MaskEditor`.
 
-1. Bump the version, pack, and publish (Windows):
+### Versioning & changelog
+
+- **Version** is whatever you pass as `-Version X.Y.Z` — nothing derives it. Follow
+  [semver](https://semver.org): patch (`1.0.1`) for fixes, minor (`1.1.0`) for new
+  features, major (`2.0.0`) for breaking changes. It **must always increase** — Velopack
+  decides "is there an update?" by comparing versions.
+- **Changelog** lives in [`../CHANGELOG.md`](../CHANGELOG.md) (Keep a Changelog format).
+  While working on `master`, add bullets under `## [Unreleased]`. To release, rename that
+  heading to `## [X.Y.Z] - <date>` and add a fresh empty `## [Unreleased]` above it.
+- The pack script **extracts that version's section** and passes it to
+  `vpk pack --releaseNotes`, so the changelog becomes the release notes automatically. If
+  you `-Publish` a version with **no** matching `## [X.Y.Z]` section, the script aborts
+  before building — so you can't ship an empty release.
+
+### Publish
+
+1. Update `CHANGELOG.md` (rename `[Unreleased]` → the new version), then pack + publish:
 
    ```powershell
    $env:GITHUB_TOKEN = "<pat>"
@@ -51,7 +67,8 @@ Set a `GITHUB_TOKEN` env var first — a PAT with `contents:write` on
 
    With `-Publish` the script first runs `vpk download github` to pull the current
    release into `releases\win-x64\` (so `vpk` can compute deltas against the prior
-   `*-full.nupkg`), then `vpk pack`, then `vpk upload github --publish`. It produces
+   `*-full.nupkg`), then `vpk pack` (with the extracted release notes), then
+   `vpk upload github --publish`. It produces
    `RELEASES`, `DayZ.MaskEditor-X.Y.Z-full.nupkg` (plus deltas),
    `DayZ.MaskEditor-win-Setup.exe`, and `DayZ.MaskEditor-win-Portable.zip`, and creates
    a `vX.Y.Z` GitHub Release with those assets attached.
