@@ -48,6 +48,7 @@
       <p class="toc-title">Contents</p>
       <ol>
         <li><a href="#overview">Overview</a></li>
+        <li><a href="#workflow">Terrain Builder workflow</a></li>
         <li><a href="#install">Install &amp; updates</a></li>
         <li><a href="#quick-start">Quick start</a></li>
         <li><a href="#workspace">The workspace</a></li>
@@ -81,6 +82,52 @@
         tile &mdash; the editor exists to make painting those masks safe and to catch rule
         violations before you pack the terrain.
       </p>
+
+      <h2 id="workflow">Where it fits in your Terrain Builder workflow</h2>
+      <p>
+        DayZ ground surfaces come from three inputs Terrain Builder ties together in the
+        <strong>Mapframe</strong>: the <strong>satellite source</strong> (satmap), the
+        <strong>surface mask source</strong> (one solid legend colour per pixel), and
+        <code>layers.cfg</code> (which maps each colour to a material and its textures). When you
+        run <strong>Generate Layers</strong>, Terrain Builder cuts the satmap and mask into
+        <strong>tiles</strong> (per the Mapframe's <strong>Samplers</strong> settings) and builds
+        each tile's ground material from the surfaces it finds &mdash; but a tile may only hold a
+        limited number of distinct surfaces (DayZ's 4/6-colours-per-tile rule), and every pixel
+        must be an <strong>exact</strong> legend colour. A stray colour or an over-budget tile
+        makes <strong>Generate Layers</strong> fail or bake the wrong material &mdash; usually
+        found only after a slow Generate Layers &rarr; binarize &rarr; test-in-game round trip.
+      </p>
+      <p>
+        This editor is the <strong>paint-and-validate step before Generate Layers</strong>, so the
+        mask you feed Terrain Builder is already valid:
+      </p>
+      <ol class="steps">
+        <li>In Terrain Builder, open <strong>Mapframe Properties &#9656; Samplers</strong> and note
+          your values &mdash; Easting/Northing, grid &amp; cell size, the satellite/surface
+          <strong>source image size</strong>, and the <strong>tile size</strong> / overlap.</li>
+        <li>Open your terrain's <code>layers.cfg</code>, satmap and current surface mask here, and
+          paint with a pencil that can only lay down exact legend colours.</li>
+        <li>Enter those Mapframe values on the <a href="#terrain">Terrain</a> tab so
+          <a href="#validation">Check Colours Per Tile</a> uses the <em>same</em> tiling Terrain
+          Builder will &mdash; it flags over-budget tiles before Generate Layers does, and auto-fix
+          can snap strays and consolidate over-limit tiles.</li>
+        <li><em>(Optional)</em> Overlay Terrain Builder <code>.shp</code> exports (roads, objects,
+          areas) as a <a href="#shapes">visual reference</a> so painted surfaces line up with
+          in-world features. The overlay never changes surface assignments.</li>
+        <li><a href="#saving">Save</a> the mask as a byte-exact PNG and point the Mapframe's
+          <strong>surface mask source</strong> at it, ready for the next <strong>Generate
+          Layers</strong>.</li>
+      </ol>
+      <div class="callout warn">
+        <p><span class="k">Back up your surface mask first.</span> Saving overwrites the mask file
+        in place, and auto-fix edits pixels in bulk &mdash; keep a copy of the original so you can
+        always fall back to it.</p>
+      </div>
+      <div class="callout">
+        <p><span class="k">In short:</span> the editor keeps your surface mask valid to DayZ's
+        rules so the expensive Generate Layers &rarr; binarize &rarr; in-game test loop doesn't
+        fail on avoidable colour or tile-limit errors.</p>
+      </div>
 
       <h2 id="install">Install &amp; updates</h2>
       <p>
