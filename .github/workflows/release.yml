@@ -1,0 +1,112 @@
+name: release
+
+# Cut a release entirely in CI by pushing a SemVer tag, e.g.:
+#   git tag v1.1.0 && git push origin v1.1.0
+# The test job gates the release; each OS runner then builds its native Velopack package
+# (Windows installer, macOS .dmg, Linux .AppImage) plus delta update feed and publishes to
+# this repo's GitHub Releases. Installed clients auto-update from the published assets.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write   # let the job create the GitHub Release
+
+# Never run two releases at once (they publish to the same Release); don't cancel a
+# publish that's already in flight.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  PACK_ID: DayZ.MaskEditor
+  PACK_TITLE: DayZ Mask Editor
+  PROJECT: src/DayZ.MaskEditor.App/DayZ.MaskEditor.App.csproj
+
+jobs:
+  # Gate the whole release on tests once. A tag push doesn't trigger tests.yml, so the
+  # release runs its own tests here.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test
+        run: >
+          dotnet test tests/DayZ.MaskEditor.Core.Tests/DayZ.MaskEditor.Core.Tests.csproj
+          --configuration Release
+
+  release:
+    needs: test
+    strategy:
+      fail-fast: false
+      # Serialize so parallel runners don't race to create the same GitHub Release.
+      max-parallel: 1
+      matrix:
+        include:
+          - os: windows-latest
+            runtime: win-x64
+            main_exe: DayZ.MaskEditor.exe
+          - os: macos-latest      # Apple Silicon
+            runtime: osx-arm64
+            main_exe: DayZ.MaskEditor
+          - os: macos-13          # Intel
+            runtime: osx-x64
+            main_exe: DayZ.MaskEditor
+          - os: ubuntu-latest
+            runtime: linux-x64
+            main_exe: DayZ.MaskEditor
+    runs-on: ${{ matrix.os }}
+    env:
+      RUNTIME: ${{ matrix.runtime }}
+      MAIN_EXE: ${{ matrix.main_exe }}
+      REPO_URL: https://github.com/${{ github.repository }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install Velopack CLI
+        shell: bash
+        run: |
+          dotnet tool install -g vpk --version 1.2.0
+          # Put the global-tools dir on PATH so `vpk` resolves on every runner.
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      # bash runs on all runners (Git Bash on Windows), so one script covers every OS;
+      # only the runtime and main exe name differ (from the matrix). The tag is the source
+      # of truth for the version: v1.2.3 -> 1.2.3.
+      - name: Publish, pack & upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          pub="publish/$RUNTIME"
+          rel="releases/$RUNTIME"
+
+          dotnet publish "$PROJECT" -c Release -r "$RUNTIME" --self-contained true -o "$pub"
+
+          mkdir -p "$rel"
+          # Pull the current release so vpk can compute a delta; the first-ever release has
+          # nothing to download, so this is allowed to fail.
+          vpk download github --repoUrl "$REPO_URL" --outputDir "$rel" --token "$GITHUB_TOKEN" \
+            || echo "No prior release to delta against; publishing a full release."
+
+          vpk pack \
+            --packId "$PACK_ID" \
+            --packVersion "$version" \
+            --packDir "$pub" \
+            --mainExe "$MAIN_EXE" \
+            --packTitle "$PACK_TITLE" \
+            --outputDir "$rel"
+
+          # --merge attaches to the tag's Release (the tag push already created the ref).
+          vpk upload github --repoUrl "$REPO_URL" --outputDir "$rel" --token "$GITHUB_TOKEN" \
+            --publish true --merge --releaseName "$PACK_TITLE $version" --tag "$GITHUB_REF_NAME"

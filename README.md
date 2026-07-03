@@ -58,7 +58,6 @@ pixel/tile logic was ported faithfully (and pinned by the same unit tests) into
 | `src/DayZ.MaskEditor.Core` | Pure logic: cfg parser, pixel/tile engine, validation, image I/O. No UI. |
 | `src/DayZ.MaskEditor.App` | Avalonia UI: surface browser, `MaskCanvas`, validation, settings, updates. |
 | `tests/DayZ.MaskEditor.Core.Tests` | xUnit — ports the plugin's parity tests plus round-trip/validation tests. |
-| `build/` | Velopack packaging scripts (see `build/README.md`). |
 | `samples/DemoTerrain` | A tiny generated terrain (layers.cfg + satmap + mask) to try the editor. |
 
 ## Build & run
@@ -73,6 +72,11 @@ Then **Browse** to `samples/DemoTerrain/source/` for `layers.cfg`, `satmap.png`,
 enter the demo's Mapframe values — Easting `0`, Northing `0`, Grid size `1024`, Cell size
 `1`, Source image `1024` — then **Add shapefile(s)** from
 `samples/DemoTerrain/source/shapes/` (`demo_roads`, `demo_objects`, `demo_areas`).
+
+## Releasing
+
+Releases are cut entirely in CI by pushing a `vX.Y.Z` tag — every platform is built and
+published to GitHub Releases automatically. See [RELEASING.md](RELEASING.md).
 
 ## Deferred to later releases
 
